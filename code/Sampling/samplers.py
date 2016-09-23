@@ -5,21 +5,38 @@ A general utility class for sampling points in d-dimensions based on
 Chebyshev Polynomial Roots, Poisson Disk, or Uniform Random Draws
 
 Created by Michael Tompkins in 2012.
-Copyright (c) 2014__PolytopX__. All rights reserved.
+Copyright (c) 2014 All rights reserved.
 """
 
 import numpy as npy
 import itertools as it
-from string import join
 import random
 
-class ndSampler():
+class ndSampler:
 
-	def cheby(self,n,d):
+	def __init__(self, samples, dimensions):
 
 		"""
-		Chebyshev Grid Nodes Computation
+		:arg numsim : integer number of points to draw
+		:arg d : integer dimensionality of sampling space
+		:return : Y : array-type (numsim,d) of numsim sampled points in d-dimensions
+
+		options - verbose : turn on (True) or off (False) print statements
 		"""
+
+		self.n = samples
+		self.d = dimensions
+		self.verbose = False
+
+	def cheby(self):
+
+		"""
+		Chebyshev Polynomial Sparse-Grid Node Enumeration
+		"""
+
+		# Set local sampling parameters
+		n = self.n
+		d = self.d
 
 		if n == 0:
 			lp = 0
@@ -29,8 +46,9 @@ class ndSampler():
 			q = lp + d
 
 			#Next call sparse cartesian product function to compute multi-index in dim=d from 1D index [indxi]
-			print "..............Computing Multi-Indices for Sparse Grids"
-			indxi3 = self.getseq(n,d)
+			if self.verbose is True:
+				print "..............Computing Multi-Indices for Sparse Grids"
+			indxi3 = self.getseq()
 
 			#Now compute number of nodes [mi] and node coordinates [xi] for each value
 			#By definition: for i=1, mi(1) = 1; xi(1,1) = 0.5
@@ -46,7 +64,9 @@ class ndSampler():
 
 			pnt = npy.ndarray(shape=(1000000,d),dtype=float)
 
-			print "..............Computing Cartesian Products for Sparse Grid Nodes"
+			if self.verbose is True:
+				print "..............Computing Cartesian Products for Sparse Grid Nodes"
+
 			tt = 0
 			for i in range(0,len(indxi3[:,0])):
 				dim = 1
@@ -86,7 +106,8 @@ class ndSampler():
 			pnt2 = npy.round(pnt[0:tt,:],decimals=5)
 
 			#Check for redundancies and remove and assign unique rows to [pnt3]
-			print "..............Checking for Redundant Grid Nodes"
+			if self.verbose is True:
+				print "..............Checking for Redundant Grid Nodes"
 
 			#Convert numpy array to list of strings for efficient redundancy check
 			hashtab = []
@@ -100,8 +121,9 @@ class ndSampler():
 					hashtab2.append(x)
 
 			#Now convert strings back to numpy array for return and/or output
-			print "..............Performing Final Grid Conversion"
-			outf2 = open('cheby.txt','w')
+			if self.verbose is True:
+				print "..............Performing Final Grid Conversion"
+
 			Y = npy.ndarray(shape=(len(hashtab2),d),dtype=float)
 			ct1 = 0
 			for x in hashtab2:
@@ -112,18 +134,19 @@ class ndSampler():
 				for i in desc:
 					Y[ct1,ct2] = float(i)
 					ct2 += 1
-				outf2.writelines(join(map(str,npy.round(Y[ct1,:],decimals=3)))+'\n')
 				ct1 += 1
-
-			outf2.close()
 
 		return Y
 
-	def poissonpoly(self,numsim,d,polytope,radius):
+	def poissonpoly(self,polytope,radius):
 
 		"""
 		Resample and add points to polytope defined by samples in argument
 		"""
+
+		# Set local sampling parameters
+		numsim = self.n
+		d = self.d
 
 		bestVal = 0
 		numCandidates = min([20,len(polytope[:,0])])
@@ -153,19 +176,20 @@ class ndSampler():
 
 		return Y
 
-	def poissondisk(self,numsim,d,num_candidates=20):
+	def poissondisk(self,num_candidates=20):
 
 		"""
 		Sampler based on Poisson disk random sampling in d-dimensions over domain [0,1]
 
-		:arg numsim : integer number of points to draw
 		:arg num_candidates : integer number of candidates to draw for each of numsim iterations
-		:arg d : integer dimensionality of sampling space
-		:return : Y : array-type (numsim,d) of numsim sampled points in d-dimensions
 
 		Note: runtime increases with increasing numCandidates to draw for each of numsim iterations, however, the success
 		of this method in optimally distributing samples also increases with increasing numCandidates
 		"""
+
+		# Set local sampling parameters
+		numsim = self.n
+		d = self.d
 
 		bestVal = 0
 		p = npy.random.RandomState()
@@ -199,16 +223,14 @@ class ndSampler():
 
 		return Y
 
-	def unfrm(self,numsim,d):
+	def unfrm(self):
 
 		"""
 		Sampler based on uniform random sampling of numsim points in d-dimensions over domain [0,1]
-
-		:arg numsim : integer number of points to draw
-		:arg d : integer dimensionality of sampling space
-		:return : Y : array-type (numsim,d) of numsim sampled points in d-dimensions
-
 		"""
+		# Set local sampling parameters
+		numsim = self.n
+		d = self.d
 
 		#Instantiate Generator for proper seeding
 		t = npy.random.RandomState()
@@ -221,15 +243,22 @@ class ndSampler():
 
 		return Y
 
-	def getseq(self,n,d):
+	def getseq(self):
 
 		"""
+		Helper method for cheby()
+
 		Get the multi-indices sequence for sparse grids without computing
 		full tensor products
 		"""
 
+		# Set local sampling parameters
+		n = self.n
+		d = self.d
+
 		nl=it.combinations(range(n+d-1),d-1)
 		nlevels = 0
+
 		for i in nl:
 			nlevels += 1
 
@@ -283,26 +312,29 @@ if __name__ == "__main__":
 	if unit == "Poisson Disk":
 		num = 400		# Number of samples to draw
 		dim1 = 2		# Dimensionality of space
-		sample = ndSampler(num,dim1,unit)
+		sample = ndSampler(num/2,dim1)
 		candidates = 20	# Number of candidate samples for each numsim iteration of sampler
-		points1 = sample.poissondisk(num/2,dim1,candidates)
-		points2 = sample.poissondisk(num,dim1,candidates)
+		points1 = sample.poissondisk(candidates)
+		sample = ndSampler(num,dim1)
+		points2 = sample.poissondisk(candidates)
 		label1 = str(num/2)+" Samples"
 		label2 = str(num)+" Samples"
 	elif unit == "Chebyshev":
-		num = 8			# Degree of polynomial to compute
+		num = 6			# Degree of polynomial to compute
 		dim1 = 2		# Dimensionality of space
-		sample = ndSampler(num,dim1,unit)
-		points1 = sample.cheby(num,dim1)
-		points2 = sample.cheby(num/2,dim1)
+		sample = ndSampler(num,dim1)
+		points1 = sample.cheby()
+		sample = ndSampler(num/2,dim1)
+		points2 = sample.cheby()
 		label1 = "Degree:"+str(num)+" Nodes"
 		label2 = "Degree:"+str(num/2)+" Nodes"
 	elif unit == "Uniform Random":
-		num = 400	# Number of samples to draw
+		num = 400		# Number of samples to draw
 		dim1 = 2		# Dimensionality of space
-		sample = ndSampler(num,dim1,unit)
-		points1 = sample.unfrm(num/2,dim1)
-		points2 = sample.unfrm(num,dim1)
+		sample = ndSampler(num/2,dim1)
+		points1 = sample.unfrm()
+		sample = ndSampler(num,dim1)
+		points2 = sample.unfrm()
 		label1 = str(num/2)+" Samples"
 		label2 = str(num)+" Samples"
 
