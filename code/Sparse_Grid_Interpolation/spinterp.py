@@ -1,31 +1,43 @@
-#function [ipfin] = mjterp(d,z_k,grdin,grdout,indx,mi,type,intvl)
-#function [ipfin] = mjterp(d,z_k,grdin,grdout,indx,mi,type)
-#
-#Script for computing hierarchical surpluses required for sparse grid
-#interpolation using companion script mjvals.m
-#
-#Surpluses are defined as difference between function (fun) evaluations at current sparse
+#!/usr/bin/env python2.7
+# encoding: utf-8
+
+"""
+Perform n-d sparse grid interpolation (See sparse_vals.py for variable description)
+using piece-wise linear or Chebyshev polynomials
+
+@author Michael Tompkins on 2016_09_24.
+@copyright (c) 2016 All rights reserved.
+
+NOTE:
+#z_k are surpluses are defined as difference between function (fun) evaluations at current sparse
 #grid nodes [grdin] and interpolated values (interp) on the same grid using previous
 #grid level interpolant. It measures the error between the current function
 #values and those estimated with the previous grid  level interpolation.
 #e.g., zk(@ k=2) = fun(grdin, @k=2) - interp(grdin,@k=1)
 
-#==========================================================================
+"""
+
 import numpy as npy
 
 def runInterp(d,z_k,grdin,grdout,indx,mi,type,intvl):
 
 	"""
 	Perform n-d sparse grid interpolation (See sparse_vals.py for variable description)
+	:arg d : int dimensionality of interpolation domain
+	:arg z_k : array of hierarchical surpluses as defined in sparse_vals.py
+	:arg grdin : array of input nodes for interpolation
+	:arg grdout : array of output points for interpolation
+	:arg mi : list of number of nodal points used in each 1-D basis of the mult-dimensional interpolation
+	:arg type : string for polynomial type "CC" - Clenshaw Curtis, or "CH" - Chebyshev
+	:arg indx : array of multi-indexes as described in sparse_vals.py
+	:return ip2 : array of interpolated values at points specified in array grdout
 	"""
 
 	num2 = grdout.shape[0]
-	num3 = grdout.shape[1]
 	num4 = indx.shape[0]
 	ipmj = npy.zeros(shape=(num2),dtype=float)
 	ip2 = npy.zeros(shape=(num2),dtype=float)
 
-	num1 = grdin.shape[0]		# # of sparse grid points at current level
 	wght = npy.zeros(shape=(num4,d),dtype=float) # Initialize weights for current level k
 	wght2 = npy.ones(shape=(num4),dtype=float)
 	polyw = npy.zeros(shape=(num4,d),dtype=float)
