@@ -11,15 +11,15 @@ Copyright (c) 2014 All rights reserved.
 import numpy as npy
 import itertools as it
 import random
+from numpy.matlib import repmat
 
 class ndSampler:
 
 	def __init__(self, samples, dimensions):
 
 		"""
-		:arg numsim : integer number of points to draw
+		:arg samples : integer number of points to draw (poisson or unfrm) or degree of polynomial interpolation (Cheby only)
 		:arg d : integer dimensionality of sampling space
-		:return : Y : array-type (numsim,d) of numsim sampled points in d-dimensions
 
 		options - verbose : turn on (True) or off (False) print statements
 		"""
@@ -32,6 +32,9 @@ class ndSampler:
 
 		"""
 		Chebyshev Polynomial Sparse-Grid Node Enumeration
+		:return : Y : array-type (numsim,d) of poynomial nodal points in d-dimensions
+		:return : mi : list specifying the number of samples for each degree (level) of samples
+		:return : indxi3 : array-type (numsim,d) - ordered index sets [indxi3] for combinations of tensor products
 		"""
 
 		# Set local sampling parameters
@@ -40,7 +43,11 @@ class ndSampler:
 
 		if n == 0:
 			lp = 0
-			Y = npy.zeros(shape=(1,d),dtype=float)
+			Y = npy.ones(shape=(1,d),dtype=float)
+			Y *= 0.5
+			indxi3 = npy.asarray([0,0])
+			indx_out = npy.asarray([0,0])
+			mi = [1]
 		else:
 			lp = n
 			q = lp + d
@@ -48,6 +55,7 @@ class ndSampler:
 			#Next call sparse cartesian product function to compute multi-index in dim=d from 1D index [indxi]
 			if self.verbose is True:
 				print "..............Computing Multi-Indices for Sparse Grids"
+
 			indxi3 = self.getseq()
 
 			#Now compute number of nodes [mi] and node coordinates [xi] for each value
@@ -62,19 +70,21 @@ class ndSampler:
 					xit.append((1+(-(npy.cos((npy.pi*(j-1))/(mi[i-1]-1)))))/2.0)
 				xi.append(xit)
 
-			pnt = npy.ndarray(shape=(1000000,d),dtype=float)
+			pnt = npy.ndarray(shape=(100000,d),dtype=float)
 
 			if self.verbose is True:
 				print "..............Computing Cartesian Products for Sparse Grid Nodes"
 
 			tt = 0
+			indxi4 = []
 			for i in range(0,len(indxi3[:,0])):
 				dim = 1
 				for p in range(0,d):
 					dim = dim * mi[indxi3[i,p]]
 
 				pnt_t = npy.ndarray(shape=(dim,d),dtype = float)
-
+				indxt = repmat(indxi3[i,:],pnt_t.shape[0],1)
+				indxi4.extend(indxt)
 				for j in range(0,len(indxi3[0,:])):
 					xt = npy.asarray(xi[indxi3[i,j]])
 
@@ -101,9 +111,11 @@ class ndSampler:
 
 					# Now pack temporary grids into final grid
 					pnt[tt:(tt + len(pnt_t[:,0])),0:d] = pnt_t
+
 				tt += len(pnt_t[:,0])
 
 			pnt2 = npy.round(pnt[0:tt,:],decimals=5)
+			indxi4 = npy.asarray(indxi4)
 
 			#Check for redundancies and remove and assign unique rows to [pnt3]
 			if self.verbose is True:
@@ -116,27 +128,31 @@ class ndSampler:
 
 			#Build list for compiling unique entries
 			hashtab2 = []
-			for x in hashtab:
+			indx_map = []
+			for r,x in enumerate(hashtab):
 				if x not in hashtab2:
 					hashtab2.append(x)
+					indx_map.append(r)
 
 			#Now convert strings back to numpy array for return and/or output
 			if self.verbose is True:
 				print "..............Performing Final Grid Conversion"
 
 			Y = npy.ndarray(shape=(len(hashtab2),d),dtype=float)
+			indx_out = npy.ndarray(shape=(len(hashtab2),d),dtype=int)
 			ct1 = 0
-			for x in hashtab2:
+			for r,x in enumerate(hashtab2):
 				ct2 = 0
 				desc = x.strip("[")
 				desc = desc.strip("]")
 				desc = desc.split()
+				indx_out[ct1,:] = indxi4[indx_map[r],:]
 				for i in desc:
 					Y[ct1,ct2] = float(i)
 					ct2 += 1
 				ct1 += 1
 
-		return Y
+		return Y, mi, indx_out
 
 	def poissonpoly(self,polytope,radius):
 
@@ -320,12 +336,17 @@ if __name__ == "__main__":
 		label1 = str(num/2)+" Samples"
 		label2 = str(num)+" Samples"
 	elif unit == "Chebyshev":
-		num = 6			# Degree of polynomial to compute
+		num = 2			# Degree of polynomial to compute
 		dim1 = 2		# Dimensionality of space
+		sample = ndSampler(num-2,dim1)
+		points1,mi0,indx0 = sample.cheby()
+		sample = ndSampler(num-1,dim1)
+		points1,mi0,indx0 = sample.cheby()
 		sample = ndSampler(num,dim1)
-		points1 = sample.cheby()
+		points1,mi0,indx0 = sample.cheby()
+		exit(0)
 		sample = ndSampler(num/2,dim1)
-		points2 = sample.cheby()
+		points2,mi0,indx0 = sample.cheby()
 		label1 = "Degree:"+str(num)+" Nodes"
 		label2 = "Degree:"+str(num/2)+" Nodes"
 	elif unit == "Uniform Random":
