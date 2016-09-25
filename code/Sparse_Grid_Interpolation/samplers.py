@@ -26,7 +26,7 @@ class ndSampler:
 
 		self.n = samples
 		self.d = dimensions
-		self.verbose = True
+		self.verbose = False
 
 	def sparse_sample(self,type):
 

@@ -49,7 +49,7 @@ import samplers as samplers
 import spinterp
 import fun_nd
 
-# TODO readme file, separate out interpolation to call here, add CC grids
+# TODO readme file, separate out interpolation to call here
 
 class sparseInterp():
 
@@ -191,7 +191,6 @@ class sparseInterp():
 							wght2[j] *= polyw[j,l]         # Perform the dimensional products for the polynomials
 						ipmj[i] += wght2[j]*zk[j]			# Sum over the number of total node points (j=num4) for all dimensions
 					ip2[i] = ipmj[i]                               # Now re-assign the interpolated value to new variable (redundant)
-				print k,i,j
 
 			else:
 				print 'error: type must be "cc" or "ch"'
@@ -215,13 +214,17 @@ if __name__ == "__main__":
 	from mpl_toolkits.mplot3d import Axes3D
 	from matplotlib import cm
 
-	n = 4
-	dim1 = 2
+	# Run Clenshaw-Curtis Piece-wise linear sparse-grid Interpolation
+	#type1 = "CC"
+	# Run Chebyshev polynomial sparse-grid interpolation
+	type1 = "CH"
+
+	n = 4	# Maximum degree of interpolation to consider - early stopping may use less degree exactness
+	dim1 = 2	# Dimensionality of function to interpolate
 	gridout = npy.asarray([[0.0,0.25,0.5,0.75,1.0],[0.0,0.25,0.5,0.75,1.0]]).T
 	[xx,yy] = npy.meshgrid([0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0],[0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0])
 	gridout = npy.asarray([xx.reshape(121),yy.reshape(121)]).T
 	intval = npy.asarray([[0.0,1.0],[0.0,1.0]]).T
-	type1 = "CC"
 
 	# Instantiate and run interpolation for Chebyshev Polynomials
 	interp = sparseInterp(n, dim1, gridout, type1, intval)
