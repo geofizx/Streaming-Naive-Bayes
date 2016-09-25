@@ -5,13 +5,13 @@
 @desciption
 
 Class to perform hierarchical sparse-grid polynomial interpolation at multiple grid levels using
-either piece-wise linear (type = 'CC') or Chebyshev polynomial (type = 'CH') basis functions at
+either piece-wise linear Clenshaw-Curtis (type = 'CC') or Chebyshev polynomial (type = 'CH') basis functions at
 sparse grid nodes specified by max degree (i.e., level) of interpolation and dimensionality of space.
 
 Early stopping is implemented when absolute error at any level is less than tol
 
 @usage
-[ip2,wk,werr,meanerr] = mjvals(maxn,d,type,intvl,fun_nd,grdout)
+[ip2,wk,werr,meanerr] = sparse_vals(maxn,d,type,intvl,fun_nd,grdout)
 
 	:arg
 
@@ -29,8 +29,8 @@ Early stopping is implemented when absolute error at any level is less than tol
 	wk : hiearchical surpluses for each interpolation level [0-maxn]
 
 @dependencies
-mjgrid.m - Companion script for computing sparse grid node points
-mjnterp.m - Companion script for computing hierarchical surpluses
+samplers.py - Companion script for computing sparse grid node points
+spinterp.py - Companion script for computing interpolation at each hierarchical level
 
 This script also calls function rmsint.m which queries "fun_nd" for the
 RMS misfit values for models at sparse grid points [grdin]
@@ -41,13 +41,12 @@ Multilinear Hierarchical Sparse Grid Interpolation in MATLAB,
 ACM Trans. Math Soft., 561-579.
 
 @author Michael Tompkins in 2012.
-@copywrite (c) 2014 All rights reserved.
+@copywrite (c) 2016 All rights reserved.
 """
 
 import numpy as npy
 import samplers as samplers
 import spinterp
-from copy import deepcopy
 import fun_nd
 
 class sparseInterp():
@@ -211,7 +210,6 @@ if __name__ == "__main__":
 	"""
 
 	import matplotlib.pyplot as pl
-	import fun_nd
 	from mpl_toolkits.mplot3d import Axes3D
 	from matplotlib import cm
 
