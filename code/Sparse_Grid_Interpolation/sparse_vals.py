@@ -31,6 +31,8 @@ Early stopping is implemented when absolute error at any level is less than tol
 @dependencies
 samplers.py - Companion script for computing sparse grid node points
 spinterp.py - Companion script for computing interpolation at each hierarchical level
+matplotlib
+mpl_toolkits.mplot3d
 
 This script also calls function rmsint.m which queries "fun_nd" for the
 RMS misfit values for models at sparse grid points [grdin]
@@ -43,8 +45,10 @@ ACM Trans. Math Soft., 561-579.
 @author Michael Tompkins in 2012.
 @copywrite (c) 2016 All rights reserved.
 """
-
+# Externals
 import numpy as npy
+
+# Internals
 import samplers as samplers
 import spinterp
 import fun_nd
