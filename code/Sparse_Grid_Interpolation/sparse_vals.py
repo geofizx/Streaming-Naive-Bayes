@@ -32,6 +32,7 @@ Early stopping is implemented when absolute error at any level is less than tol
 samplers.py - Companion script for computing sparse grid node points
 spinterp.py - Companion script for computing interpolation at each hierarchical level
 matplotlib
+matlib
 mpl_toolkits.mplot3d
 
 This script also calls function rmsint.m which queries "fun_nd" for the
@@ -47,27 +48,30 @@ ACM Trans. Math Soft., 561-579.
 """
 # Externals
 import numpy as npy
+import matplotlib.pyplot as pl
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
 
 # Internals
 import samplers as samplers
 import spinterp
 import fun_nd
 
-# TODO readme file, separate out interpolation to call here
-
 class sparseInterp():
 
-	def __init__(self, maxn, dimensions, grdout, type, intvl=None):
+	def __init__(self, maxn, dimensions, grdout, type0, intvl=None):
 
 		"""
-		:arg numsim : integer number of points to draw
-		:arg d : integer dimensionality of sampling space
-		:return : Y : array-type (numsim,d) of numsim sampled points in d-dimensions
+		:arg maxn : integer maximum degree to consider for hierarchical sparse-grid interpolation
+		:arg dimensions : integer dimensionality of sampling space
+		:arg grdout : N x d array : User specified N output grid points to interpolate function to
+		:arg type0 : string specifies base polynomial for interpolation (Chebyshev = "CH", Clenshaw-Curtis - "CC")
+		:return : ip2 : array-type (N,d) of interpolated function values
 
 		options - verbose : turn on (True) or off (False) print statements
 		"""
 
-		self.grdout = grdout
+		self.grdout = grdout			# User specified output grid points to interpolate function to
 		self.maxn = maxn				# Maximum degree of interpolation to perform -- see self.tol for early stopping
 		self.d = dimensions				# Number of dimensions of interpolation
 		self.dim1 = grdout.shape[0]		# Number of samples for output
@@ -75,7 +79,7 @@ class sparseInterp():
 		self.verbose = False			# Include print statements to stdout
 		self.debug = 0					# 0 = user defined function used, 1 = unit test fun2d used
 		self.tol = 0.001				# Early stopping criteria
-		self.type = type				# Type of polynomial to perform interpolation
+		self.type = type0				# Type of polynomial to perform interpolation
 		self.intvl = intvl				# Interval over which to perform interpolation
 
 	def runInterp(self):
@@ -91,8 +95,8 @@ class sparseInterp():
 		d = self.d
 		debug = self.debug
 		num2 = self.dim1								# Number of points to interpolate on user input grid
-		ip2 = npy.zeros(shape=(num2),dtype=float)		# Initialize final interpolated array
-		ipmj = npy.zeros(shape=(num2),dtype=float)		# Initialize d-variate interpolant array
+		ip2 = npy.zeros(shape=num2,dtype=float)			# Initialize final interpolated array
+		ipmj = npy.zeros(shape=num2,dtype=float)		# Initialize d-variate interpolant array
 		tol = self.tol									# Early stopping criteria for interpolation
 
 		grdbck = {}		# Dictionary for back storage of grid arrays at each level k, for hierarchical error checking
@@ -103,7 +107,6 @@ class sparseInterp():
 		meanerr = {}	# Dictionary of hierarchical surpluses mean errors for each level k
 		werr = {}		# Dictionary of hierarchical surpluses absolute errors for each level k
 
-		# TODO need to check that fun_nd is valid function evalution and exists
 		# Loop over all grid levels (i.e., polynomial degree) from k=0:maxn to determine optimal level for interpolation
 		# Break criteria is when mx{zk} <= toler
 		for k in xrange(0,maxn+1):
@@ -135,7 +138,10 @@ class sparseInterp():
 			polyw = npy.zeros(shape=(num4,d),dtype=float)
 
 			# Determine function values at current kth sparse grid nodes using user-defined function fun_nd
-			yk[k] = fun_nd.fun_nd(grdin)
+			try:
+				yk[k] = fun_nd.fun_nd(grdin)
+			except:
+				raise Exception("User-defined function missing or behaving abnormally")
 
 			# Initialize surpluses to current grid node values
 			zk = yk[k]
@@ -204,26 +210,20 @@ class sparseInterp():
 			werr[k] = npy.max(npy.abs(wk[k]))      # Compute absolute error of current grid level
 			meanerr[k] = npy.mean(npy.abs(wk[k]))  # Compute mean error of current grid level
 
-		ip2 = ip2.T									# Take the transpose of the interpolated vector output to conform
-
 		return ip2,meanerr,werr
 
 if __name__ == "__main__":
 
 	"""
-	Run unit tests
+	Unit tests
 	"""
-
-	import matplotlib.pyplot as pl
-	from mpl_toolkits.mplot3d import Axes3D
-	from matplotlib import cm
 
 	# Run Clenshaw-Curtis Piece-wise linear sparse-grid Interpolation
 	#type1 = "CC"
 	# Run Chebyshev polynomial sparse-grid interpolation
 	type1 = "CH"
 
-	n = 4	# Maximum degree of interpolation to consider - early stopping may use less degree exactness
+	n = 6	# Maximum degree of interpolation to consider - early stopping may use less degree exactness
 	dim1 = 2	# Dimensionality of function to interpolate
 	gridout = npy.asarray([[0.0,0.25,0.5,0.75,1.0],[0.0,0.25,0.5,0.75,1.0]]).T
 	[xx,yy] = npy.meshgrid([0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0],[0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0])
