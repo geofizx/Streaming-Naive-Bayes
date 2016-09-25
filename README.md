@@ -13,10 +13,12 @@ Chebyshev Polynomials – Cos Basis Functions (sup. [0,1])
 Fejer Polynomials - Coming Soon (open support (-1,1))
 
 **Usage**
+
 See sparse_vals.py __main__ for example usage for sparse-grid interpolation
 See samplers.py __main__ for example usage for sparse-grid, Poisson, and Uniform random sampling grids
 
 **User defined function**
+
 fun_nd.py provides example code that evaluates functions in 2D for a given test function. The user must specify a
 new funtion fun_nd.py that follows this same format and evaluates n-dim target functions desired for interpolation.
 
