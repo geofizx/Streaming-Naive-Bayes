@@ -2,7 +2,7 @@
 # encoding: utf-8
 """
 A general utility class for sampling points in d-dimensions based on
-Chebyshev Polynomial Roots, Poisson Disk, or Uniform Random Draws
+sparse grid Clenshaw-Curtis or Chebyshev Polynomial Roots, Poisson Disk, or Uniform Random Draws
 
 Created by Michael Tompkins in 2012.
 Copyright (c) 2014 All rights reserved.
@@ -26,16 +26,24 @@ class ndSampler:
 
 		self.n = samples
 		self.d = dimensions
-		self.verbose = False
+		self.verbose = True
 
-	def cheby(self):
+	def sparse_sample(self,type):
 
 		"""
-		Chebyshev Polynomial Sparse-Grid Node Enumeration
+		Sparse-Grid - Polynomial Root Node Enumeration
+
+		:arg : type : string type of polyomial to use for root nodes ("CH" - Chebyshev, "CC" - Clenshaw Curtis)
 		:return : Y : array-type (numsim,d) of poynomial nodal points in d-dimensions
 		:return : mi : list specifying the number of samples for each degree (level) of samples
 		:return : indxi3 : array-type (numsim,d) - ordered index sets [indxi3] for combinations of tensor products
 		"""
+
+		# Check type input and exit if not supported
+		type_s = ["CH","ch","cc","CC"]
+		if type not in type_s:
+			print "input type String must be 'CH' or 'CC'"
+			exit(1)
 
 		# Set local sampling parameters
 		n = self.n
@@ -45,7 +53,6 @@ class ndSampler:
 			lp = 0
 			Y = npy.ones(shape=(1,d),dtype=float)
 			Y *= 0.5
-			indxi3 = npy.asarray([0,0])
 			indx_out = npy.asarray([0,0])
 			mi = [1]
 		else:
@@ -67,7 +74,10 @@ class ndSampler:
 				mi.append(2**(i-1)+1)
 				xit = []
 				for j in range(1,mi[i-1]+1):
-					xit.append((1+(-(npy.cos((npy.pi*(j-1))/(mi[i-1]-1)))))/2.0)
+					if type == "CH" or type == "ch":
+						xit.append((1+(-(npy.cos((npy.pi*(j-1))/(mi[i-1]-1)))))/2.0)
+					else:
+						xit.append(float(j-1)/(mi[i-1]-1))
 				xi.append(xit)
 
 			pnt = npy.ndarray(shape=(100000,d),dtype=float)
@@ -321,6 +331,7 @@ if __name__ == "__main__":
 	2D unit tests for sampling methods
 	"""
 
+	#unit = "Clenshaw"
 	unit = "Chebyshev"
 	#unit = "Poisson Disk"
 	#unit = "Uniform Random"
@@ -335,20 +346,27 @@ if __name__ == "__main__":
 		points2 = sample.poissondisk(candidates)
 		label1 = str(num/2)+" Samples"
 		label2 = str(num)+" Samples"
+
 	elif unit == "Chebyshev":
-		num = 2			# Degree of polynomial to compute
+		num = 4			# Degree of polynomial to compute
 		dim1 = 2		# Dimensionality of space
-		sample = ndSampler(num-2,dim1)
-		points1,mi0,indx0 = sample.cheby()
-		sample = ndSampler(num-1,dim1)
-		points1,mi0,indx0 = sample.cheby()
 		sample = ndSampler(num,dim1)
-		points1,mi0,indx0 = sample.cheby()
-		exit(0)
+		points1,mi0,indx0 = sample.sparse_sample("CH")
 		sample = ndSampler(num/2,dim1)
-		points2,mi0,indx0 = sample.cheby()
+		points2,mi0,indx0 = sample.sparse_sample("CH")
 		label1 = "Degree:"+str(num)+" Nodes"
 		label2 = "Degree:"+str(num/2)+" Nodes"
+
+	elif unit == "Clenshaw":
+		num = 4			# Degree of polynomial to compute
+		dim1 = 2		# Dimensionality of space
+		sample = ndSampler(num,dim1)
+		points1,mi0,indx0 = sample.sparse_sample("CC")
+		sample = ndSampler(num/2,dim1)
+		points2,mi0,indx0 = sample.sparse_sample("CC")
+		label1 = "Degree:"+str(num)+" Nodes"
+		label2 = "Degree:"+str(num/2)+" Nodes"
+
 	elif unit == "Uniform Random":
 		num = 400		# Number of samples to draw
 		dim1 = 2		# Dimensionality of space
@@ -359,7 +377,7 @@ if __name__ == "__main__":
 		label1 = str(num/2)+" Samples"
 		label2 = str(num)+" Samples"
 
-	pl.plot(points1[:,0],points1[:,1],'r.',label=label1)
+	pl.plot(points1[:,0],points1[:,1],'ro',label=label1)
 	pl.hold(True)
 	pl.plot(points2[:,0],points2[:,1],'bo',label=label2)
 	pl.title(unit+" Samples")

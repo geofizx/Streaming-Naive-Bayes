@@ -49,6 +49,8 @@ import samplers as samplers
 import spinterp
 import fun_nd
 
+# TODO readme file, separate out interpolation to call here, add CC grids
+
 class sparseInterp():
 
 	def __init__(self, maxn, dimensions, grdout, type, intvl=None):
@@ -109,8 +111,8 @@ class sparseInterp():
 			#[grdin,indx,mi] = mjgrid(k,d,type,[0,1])
 			"""
 
-			samp = samplers.ndSampler(k,d)		# Instantitate sampler class for current level k (degree) of interpolation
-			grdin,mi,indx = samp.cheby()		# Compute polynomial nodes for each level k of interpolation
+			samp = samplers.ndSampler(k,d)					# Instantitate sampler class for current level k (degree) of interpolation
+			grdin,mi,indx = samp.sparse_sample(type)		# Compute polynomial nodes for each level k of interpolation
 
 			if k == 0:
 				indx = indx[npy.newaxis,:]		# Add dimension when 1-D array returned for level 0 grid
