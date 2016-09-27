@@ -541,13 +541,15 @@ class signalProcess:
 				noise = (1/npy.percentile(max_power,50))
 				s_noise_l = Pxx_den*noise
 
-
+				periods_out["periods"] = npy.asarray(periods)[Pmask][Pmaskf]
+				periods_out["pxx_den"] = Pxx_den[Pmask][Pmaskf]
+				periods_out["s_noise_l"] = s_noise_l
 
 		except Exception as e:
 			raise Exception (e)
 
-		return npy.asarray(periods),Pxx_den,npy.asarray(periods)[Pmask][Pmaskf],Pxx_den[Pmask][Pmaskf],s_noise_l
-
+		#return npy.asarray(periods),Pxx_den,npy.asarray(periods)[Pmask][Pmaskf],Pxx_den[Pmask][Pmaskf],s_noise_l
+		return periods_out
 
 
 	def getPowerDistanceAndSNR(self,tmp0a,periods_indx,periods_old,fullperiods,fullpower,snrL):
@@ -942,79 +944,13 @@ if __name__ == "__main__":
 		t_en = time.time()
 		print "Data loading time:",t_en - t_st
 
-		lrner = sensorFlow(GlowfishException)
-
-		lrner3 = pcaAnomaly(GlowfishException)
+		options = None
+		lrner = signalProcess(data,options)
 
 		# Stream data to sensorProcess in 4k sample windows
 		sensor_list = data["data_set"].keys()
 		#sensor_list = data["data_set"].keys()[0:-3]
 		#sensor_list = [keyname_1,keyname_2,keyname_3]
-
-		stpt = 12000
-		endpt = 12001
-		clust_on = 0
-		stored_states1 = None
-		data_stream = {"data":{},"time":[]}
-		for i in range(stpt,endpt):
-			#if i > stpt+80 and i <= stpt+150:
-			#	sensor_list = data["data_set"].keys()
-			#elif i > stpt+150:
-			#	sensor_list = data["data_set"].keys()[0:7]
-			#print "stream",i
-			# Overhead handled by API and client side normally
-			data_stream["data"] = {skey : data["data_set"][skey][i-min([1000,(i+1000-stpt)]):i] for skey in sensor_list}
-			data_stream["time"] = {skey : time_sec[skey][i-min([1000,(i+1000-stpt)]):i] for skey in sensor_list}
-			#print "Number of Sensors:",len(data_stream["data"].keys())
-			###data_stream["data"] = {keyname_1:data["data_set"][keyname_1][i-min([4000,(i+1000-stpt)]):i]}
-			###data_stream["time"] = {keyname_1:time_sec[keyname_1][i-min([4000,(i+1000-stpt)]):i]}
-			#data_stream["data"]['8abd86de-c4a6-44ad-987e-63ee947be4ef'] = data_stream["data"]['8abd86de-c4a6-44ad-987e-63ee947be4ef'][1:-1]
-			#data_stream["time"]['8abd86de-c4a6-44ad-987e-63ee947be4ef'] = data_stream["time"]['8abd86de-c4a6-44ad-987e-63ee947be4ef'][1:-1]
-
-			t05 = time.time()		# Request time proxy
-
-			if i > stpt:
-				if clust_on >= 0:
-					cluster_bool = True
-					clust_on = 0
-				dsp_output = lrner.sensorProcess(data_stream,cluster_bool,stored_states1)
-				stored_states1 = dsp_output["states"]
-				stored_states1["time_system_performance"] = dsp_output["states_time"]
-				#stored_states1["time_powers"]["first"].append(float(npy.max(dsp_output["states_time"])+1.0))
-				#for keyval2 in dsp_output["metrics"]["group_performance"]:
-				#	print keyval2,dsp_output["metrics"]["cluster_group"][keyval2]
-				ct5 = 1
-				for keyval2 in dsp_output["states"]["mavg"]:
-					print i,ct5,keyval2,dsp_output["states"]["primary_period"][keyval2][-1]
-					print 'length input,processed',len(data_stream["data"][keyname_1]),\
-						len(dsp_output["data"][keyname_1])
-					ct5 += 1
-
-				cluster_bool = False
-				clust_on += 1
-			else:
-
-				cluster_bool = True
-				dsp_output = lrner.sensorProcess(data_stream,cluster_bool)
-				stored_states1 = dsp_output["states"]
-				stored_states1["time_system_performance"] = dsp_output["states_time"]
-				#stored_states1["time_powers"] = {"first":[float(npy.min(dsp_output["states_time"])-1.0)]}
-				#stored_states1["time_powers"]["first"].append(float(npy.max(dsp_output["states_time"])+1.0))
-				cluster_bool = False
-				clust_on += 1
-
-		dsp_new = deepcopy(dsp_output)
-		#print dsp_new["states"].keys()
-		print "writing output"
-		file5 = open("stats.json","w")
-		json.dump(dsp_new,file5)
-		file5.close()
-
-	else:
-		lrner = sensorFlow(GlowfishException)
-		file5 = open("stats.json","r")
-		dsp_new = json.load(file5)
-		file5.close()
 
 	timetemp = []
 	for it in dsp_new["processed_time"]:
