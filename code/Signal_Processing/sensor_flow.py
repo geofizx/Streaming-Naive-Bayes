@@ -1176,7 +1176,7 @@ class sensorFlow:
 	def getPowerDistanceAndSNR(self,tmp0a,periods_indx,periods_old,fullperiods,fullpower,snrL):
 		"""
 		Compute power distance between previous and current periodicity of discrete function by interpolation of current
-		periodogram series to ACF time periods and computing L2 norm of previous state and current state.
+		periodogram series to ACF time periods and computing L2 norm of previous states - current states.
 		Also convert input SNR to units: dB.
 
 		:arg tmp0a (list of dominant periods), periods_indx (ist of indexes of dominant periods within entire power series)
@@ -1189,7 +1189,7 @@ class sensorFlow:
 
 		try:
 
-			#Exceptions if no peak period found or begining from first call in time-series
+			#Exceptions if no peak period present in input periods list or begining from first call in time-series
 			if periods_old is None:
 
 				if len(tmp0a) == 0:
@@ -1241,7 +1241,7 @@ class sensorFlow:
 			raise self.exceptionClass(e) #'466.2')
 
 	@print_timing
-	def trimPeriods(self,tmp2gradprime,options,period,tmp2):
+	def trimPeriods(self,period,tmp2):
 
 		"""
 		Map candidate dominant time-series periods returned by getPeriodogram() to ACF time lags, then determine by first
@@ -1250,38 +1250,30 @@ class sensorFlow:
 
 		Method : "On Periodicity Detection and Structural Periodic Similarity", Vlachos, Yu, & Castelli, 2005
 
-		:arg tmp2gradprime : first and second derivatives of ACF returned from getDerivative()
-				options : base interval of periodicity of time-series to be used as local ACF window here
-				period : candidate periods list from getPeriodogram()
-				tmp2 : list of indexes of dominant periods series
-		:return tmp0c : list of "trimmed" periods translated to represent ACF maxima not periodogram maxima
-				indx_trim2 : list of "trimmed" powers for "trimmed" periods in entire periodicity array
+		:arg 	period : candidate periods list from getPeriodogram()
+				tmp2 : list of indexes of candidate periods series
+		:return tmp0c : list of "trimmed" periods indexes representing ACF maxima not periodogram maxima
+				indx_trim2 : list of "trimmed" periods (ACF maxima) in entire periodicity array
 		"""
 
 		try:
 
-			tmp1 = []
-			tmp1a = []
 			tmp0 = []
 			tmp0a = []
-			Np = len(tmp2)
 
-			# Iterate over all input dominant periods returned by getPeriodogram()
+			# Iterate over all input dominant periods returned by getPeriodogram() and input here
 			tmp8 = []
 			tmp8a = []
 			for value in period:
 
-				# Set local ACF windows for determining if derivatives are maximal locally
-				wind1 = range(max([int(value) - int(round(value/8.,0)),int(round(min(period),0))]),
-				  int(value) + int(round(value/2.,0)))
-
+				# Set local ACF search window for determining if derivatives are maximal locally
 				wind2 = range(max([int(value) - int(round(min(period)/2.,0)),int(round(min(period)/2.,0))]),
 				  max([int(value) + int(round(value/20.,0)),int(value) + int(round(min(period)/2.,0))]))
 
 				err_chk = 1.0e+10
 				valid = False
 				loc = None
-				for k in range(min([18,len(wind2)-2])):	# Perform 10-bisection regression to get best split of window
+				for k in range(min([18,len(wind2)-2])):	# Perform 10-bisection regression to get optimal split of window
 					a = wind2[0]
 					b = wind2[-1]
 					split = max([len(wind2)/20,1])
@@ -1302,7 +1294,7 @@ class sensorFlow:
 							valid = True
 						else:
 							valid = False
-				#print "valid",valid,loc
+
 				if valid is True:
 					indx1 = npy.argmax([tmp2[m] for m in loc])
 					tmp0.append(tmp2[loc[indx1]])
@@ -1358,12 +1350,12 @@ class sensorFlow:
 			#tmp0c = list(set(tmp0b))
 			#indx_trim2 = tmp2[tmp0c].tolist()
 			#print "final2",tmp0c,indx_trim2
-			# plt.plot(tmp2)
-			# plt.hold(True)
-			# #plt.plot(tmp2gradprime[:-5],'r')
-			# plt.plot(tmp8a,tmp8,'ro')
-			# plt.plot(tmp0c,indx_trim2,'ko')
-			# plt.show()
+			plt.plot(tmp2)
+			plt.hold(True)
+			#plt.plot(tmp2gradprime[:-5],'r')
+			plt.plot(tmp8a,tmp8,'ro')
+			plt.plot(tmp0c,indx_trim2,'ko')
+			plt.show()
 
 			return tmp0c,indx_trim2
 
@@ -1374,7 +1366,7 @@ class sensorFlow:
 	def getRedundant(self,input_indx,input_data,array1):
 
 		"""
-		Recursion to remove redundant values in periodicity array
+		Recursion to remove nearly redundant values in periodicity array
 		"""
 		indx1 = [input_indx[0]]
 		value1 = [input_data[0]]
