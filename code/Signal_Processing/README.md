@@ -7,21 +7,21 @@ dictionary. Time series do not have to be the same length or sampled at the same
 
 replaceNullData - method for simple replacement of a single known amplitude from input series (e.g., known error codes)
 
-despikeSeries - method for adaptive input despiking using Savitsky-Golay filtering, Otsu's method for
-                thresholding, and interpolation for spike data replacement.
-                Threshold seeks to maximize inter-class variance between "spike" class and "normal" class
+despikeSeries - method for adaptive despiking with minimal distortion using Savitsky-Golay filtering, Otsu's method for
+                thresholding, and interpolation for spike data replacement. Threshold seeks to maximize inter-class
+                variance between "spike" class and "normal" class.
 
-registerTime - method for multiple time-series time registration using linear interpolation. Interpolation made to
-                mean sampling rate of n-dim sensor time-series with outliers removed before mean sample rate is computed.
+registerTime - method for multiple time series time registration using linear interpolation. Interpolation made to
+               mean sampling rate of n-dim sensor time series with outliers removed before mean sample rate is computed.
 
-getPrimaryPeriods - method for automatically picking primary periodicity from multiple input series based on
+getPrimaryPeriods - method for automatically picking primary periods from multiple input series based on
                 collaboration between periodogram and auto-correlation function to tolerate long + short periodicities
-                Also returns SNR for each resulting primary period
+                Also returns SNR for each resulting primary periods.
 
 ####input####
-    data_input (dictionary) - contains nested dictionaries with two high level keys: {"data" : {}, "time" :{} }
-    "data" : dictionary containing key:data pairs (lists) for each time-series to be processed (of potentially different lengths)
-    (optional) "time" : dictionary containing key:timestampe pairs (lists) corresponding to timestamps for each list in "data"
+    data_input (dictionary) - contains nested dictionaries with two high level keys: {"data" : {}, "time" :{}}
+    "data" : dictionary containing key:data series pairs (lists) for each time-series to be processed (of potentially different lengths)
+    (optional) "time" : dictionary containing key:timestamp series pairs (lists) corresponding to timestamps for each datum in "data"
     (optional) "options" (dictionary) - contains options for various methods as follows:
 
     replaceNullData() - options["value"] (float) - single value to be replaced in all time-series input data
