@@ -9,85 +9,86 @@ Some unit tests and usage examples for Smolyak Sparse Grid Interpolation library
 
 @Usage Examples and Tests
 
-2D Chebyshev sparse grid nodes
-2D Clenshaw-Curtis sparse grid nodes
-2D Poisson Disk samples
-2D Uniform Random samples
+2D Chebyshev polynomial sparse grid interpolation of 2D test function in fun_nd
+2D Clenshaw-Curtis piece-wise linear basis sparse grid interpolation of 2D test function in fun_nd
 
 Generate plots for some outputs
 """
 
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
+import numpy as npy
 import matplotlib.pyplot as pl
-from Sparse_Grid_Interpolation import ndSampler
+from Sparse_Grid_Interpolation import sparseInterp, fun_nd
 
 # Determine which tests will be run with bools
-Poisson = True
 Chebyshev = True
 Clenshaw = True
-Uniform = True
-
-if Poisson is True:
-	num = 400		# Number of samples to draw
-	dim1 = 2		# Dimensionality of space
-	sample = ndSampler(num/2,dim1)
-	candidates = 20	# Number of candidate samples for each numsim iteration of sampler
-	points1 = sample.poissondisk(candidates)
-	sample = ndSampler(num,dim1)
-	points2 = sample.poissondisk(candidates)
-	label1 = str(num/2)+" Samples"
-	label2 = str(num)+" Samples"
-	pl.plot(points1[:,0],points1[:,1],'ro',label=label1)
-	pl.hold(True)
-	pl.plot(points2[:,0],points2[:,1],'bo',label=label2)
-	pl.title("Poisson Disk Random Samples")
-	pl.legend()
-	pl.show()
 
 if Chebyshev is True:
-	num = 4			# Degree of polynomial to compute
-	dim1 = 2		# Dimensionality of space
-	sample = ndSampler(num,dim1)
-	points1,mi0,indx0 = sample.sparse_sample("CH")
-	sample = ndSampler(num/2,dim1)
-	points2,mi0,indx0 = sample.sparse_sample("CH")
-	label1 = "Degree:"+str(num)+" Nodes"
-	label2 = "Degree:"+str(num/2)+" Nodes"
-	pl.plot(points1[:,0],points1[:,1],'ro',label=label1)
-	pl.hold(True)
-	pl.plot(points2[:,0],points2[:,1],'bo',label=label2)
-	pl.title("Chebyshev Sparse-Grid Samples")
-	pl.legend()
+
+	# Run Chebyshev polynomial sparse-grid interpolation of 2D test function in fun_nd
+	type1 = "CH"
+
+	n = 6	# Maximum degree of interpolation to consider - early stopping may use less degree exactness
+	dim1 = 2	# Dimensionality of function to interpolate
+	gridout = npy.asarray([[0.0,0.25,0.5,0.75,1.0],[0.0,0.25,0.5,0.75,1.0]]).T
+	[xx,yy] = npy.meshgrid([0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0],[0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0])
+	gridout = npy.asarray([xx.reshape(121),yy.reshape(121)]).T
+	intval = npy.asarray([[0.0,1.0],[0.0,1.0]]).T
+
+	# Instantiate and run interpolation for Chebyshev Polynomials
+	interp = sparseInterp(n, dim1, gridout, type1, intval)
+	output,meanerr1,werr1 = interp.runInterp()
+
+	# Compare results with true function
+	tmpvals = npy.asarray(fun_nd.fun_nd(gridout))
+	tmpval2 = tmpvals.reshape(11,11)
+
+	fig = pl.figure()
+	ax = fig.add_subplot(131, projection='3d',title="True Function")
+	ax.plot_surface(xx, yy, tmpval2,  rstride=1, cstride=1, cmap=cm.jet)
+	ax = fig.add_subplot(132, projection='3d',title="Interpolation")
+	tmpval3 = output.reshape(11,11)
+	ax.plot_surface(xx, yy, tmpval3,  rstride=1, cstride=1, cmap=cm.jet)
+	ax = fig.add_subplot(133, projection='3d', title="Interpolation Error")
+	tmpval4 = npy.abs(tmpval3 - tmpval2)
+	ax.plot_surface(xx, yy, tmpval4,  rstride=1, cstride=1, cmap=cm.jet)
+	ax.set_zlim(0.0,npy.max(tmpval4)*2)
 	pl.show()
+
+	print "Mean Error for Each Degree of Total Degree:",n,": ",meanerr1
 
 if Clenshaw is True:
-	num = 4			# Degree of polynomial to compute
-	dim1 = 2		# Dimensionality of space
-	sample = ndSampler(num,dim1)
-	points1,mi0,indx0 = sample.sparse_sample("CC")
-	sample = ndSampler(num/2,dim1)
-	points2,mi0,indx0 = sample.sparse_sample("CC")
-	label1 = "Degree:"+str(num)+" Nodes"
-	label2 = "Degree:"+str(num/2)+" Nodes"
-	pl.plot(points1[:,0],points1[:,1],'ro',label=label1)
-	pl.hold(True)
-	pl.plot(points2[:,0],points2[:,1],'bo',label=label2)
-	pl.title("Clenshaw-Curtis Sparse-Grid Samples")
-	pl.legend()
+
+	# Run Clenshaw-Curtis Piece-wise linear sparse-grid Interpolation of 2D test function in fun_nd
+	type1 = "CC"
+
+	n = 6	# Maximum degree of interpolation to consider - early stopping may use less degree exactness
+	dim1 = 2	# Dimensionality of function to interpolate
+	gridout = npy.asarray([[0.0,0.25,0.5,0.75,1.0],[0.0,0.25,0.5,0.75,1.0]]).T
+	[xx,yy] = npy.meshgrid([0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0],[0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0])
+	gridout = npy.asarray([xx.reshape(121),yy.reshape(121)]).T
+	intval = npy.asarray([[0.0,1.0],[0.0,1.0]]).T
+
+	# Instantiate and run interpolation for Chebyshev Polynomials
+	interp = sparseInterp(n, dim1, gridout, type1, intval)
+	output,meanerr1,werr1 = interp.runInterp()
+
+	# Compare results with true function
+	tmpvals = npy.asarray(fun_nd.fun_nd(gridout))
+	tmpval2 = tmpvals.reshape(11,11)
+
+	fig = pl.figure()
+	ax = fig.add_subplot(131, projection='3d',title="True Function")
+	ax.plot_surface(xx, yy, tmpval2,  rstride=1, cstride=1, cmap=cm.jet)
+	ax = fig.add_subplot(132, projection='3d',title="Interpolation")
+	tmpval3 = output.reshape(11,11)
+	ax.plot_surface(xx, yy, tmpval3,  rstride=1, cstride=1, cmap=cm.jet)
+	ax = fig.add_subplot(133, projection='3d', title="Interpolation Error")
+	tmpval4 = npy.abs(tmpval3 - tmpval2)
+	ax.plot_surface(xx, yy, tmpval4,  rstride=1, cstride=1, cmap=cm.jet)
+	ax.set_zlim(0.0,npy.max(tmpval4)*2)
 	pl.show()
 
-if Uniform is True:
-	num = 400		# Number of samples to draw
-	dim1 = 2		# Dimensionality of space
-	sample = ndSampler(num/2,dim1)
-	points1 = sample.unfrm()
-	sample = ndSampler(num,dim1)
-	points2 = sample.unfrm()
-	label1 = str(num/2)+" Samples"
-	label2 = str(num)+" Samples"
-
-	pl.plot(points1[:,0],points1[:,1],'ro',label=label1)
-	pl.hold(True)
-	pl.plot(points2[:,0],points2[:,1],'bo',label=label2)
-	pl.title("Uniform Random Samples")
-	pl.legend()
-	pl.show()
+	print "Mean Error for Each Degree of Total Degree:",n,": ",meanerr1

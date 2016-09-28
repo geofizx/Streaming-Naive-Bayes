@@ -31,9 +31,6 @@ Early stopping is implemented when absolute error at any level is less than tol
 @dependencies
 samplers.py - Companion script for computing sparse grid node points
 spinterp.py - Companion script for computing interpolation at each hierarchical level
-matplotlib
-matlib
-mpl_toolkits.mplot3d
 
 This script also calls function rmsint.m which queries "fun_nd" for the
 RMS misfit values for models at sparse grid points [grdin]
@@ -46,11 +43,9 @@ ACM Trans. Math Soft., 561-579.
 @author Michael Tompkins in 2012.
 @copywrite (c) 2016 All rights reserved.
 """
+
 # Externals
 import numpy as npy
-import matplotlib.pyplot as pl
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import cm
 
 # Internals
 import samplers as samplers
@@ -215,40 +210,7 @@ class sparseInterp():
 if __name__ == "__main__":
 
 	"""
-	Unit tests
+	Unit tests - see /tests/sparse_grid_inter_tests.py for useage and unit tests for this class
 	"""
 
-	# Run Clenshaw-Curtis Piece-wise linear sparse-grid Interpolation
-	#type1 = "CC"
-	# Run Chebyshev polynomial sparse-grid interpolation
-	type1 = "CH"
-
-	n = 6	# Maximum degree of interpolation to consider - early stopping may use less degree exactness
-	dim1 = 2	# Dimensionality of function to interpolate
-	gridout = npy.asarray([[0.0,0.25,0.5,0.75,1.0],[0.0,0.25,0.5,0.75,1.0]]).T
-	[xx,yy] = npy.meshgrid([0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0],[0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0])
-	gridout = npy.asarray([xx.reshape(121),yy.reshape(121)]).T
-	intval = npy.asarray([[0.0,1.0],[0.0,1.0]]).T
-
-	# Instantiate and run interpolation for Chebyshev Polynomials
-	interp = sparseInterp(n, dim1, gridout, type1, intval)
-	output,meanerr1,werr1 = interp.runInterp()
-
-	# Compare results with true function
-	tmpvals = npy.asarray(fun_nd.fun_nd(gridout))
-	tmpval2 = tmpvals.reshape(11,11)
-
-	fig = pl.figure()
-	ax = fig.add_subplot(131, projection='3d',title="True Function")
-	ax.plot_surface(xx, yy, tmpval2,  rstride=1, cstride=1, cmap=cm.jet)
-	ax = fig.add_subplot(132, projection='3d',title="Interpolation")
-	tmpval3 = output.reshape(11,11)
-	ax.plot_surface(xx, yy, tmpval3,  rstride=1, cstride=1, cmap=cm.jet)
-	ax = fig.add_subplot(133, projection='3d', title="Interpolation Error")
-	tmpval4 = npy.abs(tmpval3 - tmpval2)
-	ax.plot_surface(xx, yy, tmpval4,  rstride=1, cstride=1, cmap=cm.jet)
-	ax.set_zlim(0.0,npy.max(tmpval4)*2)
-	pl.show()
-
-	print "Mean Error for Each Degree of Total Degree:",n,": ",meanerr1
 

@@ -326,5 +326,5 @@ class ndSampler:
 if __name__ == "__main__":
 
 	"""
-	See /tests/sparse_grid_interp_tests.py for 2D usage and unit tests for this class
+	See /tests/grid_random_sampler_tests.py for 2D usage and unit tests for this class
 	"""
