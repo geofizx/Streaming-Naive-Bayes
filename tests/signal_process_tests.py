@@ -6,19 +6,14 @@ Some unit tests and usage examples for signal processing library
 
 @author Michael Tompkins
 @copyright 2016__. All rights reserved.
-"""
 
-
-
-"""
-Usage Examples and Tests
-
-Run tests for time key or no time key for all routines
+@Usage Examples and Tests
+Run tests for primary periods of multiple time-series data
+Run tests for time registration of multiple time-series data
 Run tests for timeRegister of multiple series input
-Show chaining of methods for despike with sensor13 given min periodicity
-Run tests for all options
+Run despike with 30-sample window given min periodicity
 Run replacement test
-Generate plots for some outputs for documentation
+Generate plots for some outputs
 """
 
 import numpy as npy
