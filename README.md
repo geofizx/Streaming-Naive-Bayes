@@ -8,7 +8,10 @@ cases, the algorithms may be well known, but I have implemented them in a differ
 memory efficiently). In this sense, I am hopeful the code will be of use to some people.
 
 #### Contents
-* [List of Algorithms](#Algorithms)
+* [Algorithms](#Algorithms)
+    * [Sparse Grid Sampling/Interpolation/Integration](#Sparse-Grids)
+    * [Signal Processing](#Signal-Processing)
+    * [Machine Learning](#Machine-Learning)
 * [Library Usage](#Usage)
 * [Running Tests](#Tests)
 * [Contact Me](#Contact)
@@ -17,6 +20,12 @@ memory efficiently). In this sense, I am hopeful the code will be of use to some
 #### Algorithms ####
 
 Below is a list of the classes and methods contained in this repo along with a brief description of the algorithms.
+
+    ### Sparse-Grids ###
+
+    ### Signal-Processing ###
+
+    ### Machine-Learning ###
 
 #### Usage ####
 
