@@ -21,16 +21,16 @@ memory efficiently). In this sense, I am hopeful the code will be of use to some
 
 Below is a list of the classes and methods contained in this repo along with a brief description of the algorithms.
 
-### Sparse-Grids ###
+#### Sparse-Grids ####
 
 
-### Signal-Processing ###
+#### Signal-Processing ####
 
 
-### Machine-Learning ###
+#### Machine-Learning ####
 
 
-#### Usage ####
+##### Usage ####
 
 
 
