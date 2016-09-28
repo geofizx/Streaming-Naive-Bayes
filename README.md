@@ -33,17 +33,7 @@ Below is a list of the classes and methods contained in this repo along with a b
 ##### Usage ####
 
 
-
-
-
-
-
 #### Tests ####
-
-
-
-
-
 
 
 #### Contact ####
