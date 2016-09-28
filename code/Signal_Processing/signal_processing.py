@@ -49,7 +49,6 @@
 
 @dependencies :
 		scipy
-		matplotlib
 
 @author michael@glowfish.io
 @date 2016-02-10
