@@ -5,7 +5,8 @@
 
 @description
 
-	Time-Series signal processing class which handles multiple time-series from input dictionary.
+	Time-Series signal processing class which accomodates any number of time-series contained in input dictionary.
+
 	The following methods are implemented :
 
 	replaceNullData - method for simple replacement of a single known amplitude from input (e.g., known error codes)
@@ -19,12 +20,12 @@
 
 	getPrimaryPeriods - method for automatically picking primary periodicity from multiple input series based on
 					collaboration between periodogram and auto-correlation function to tolerate long + short periodicities
-
+					Also returns SNR for each resulting primary period
 
 @input : data_input (dictionary) - contains nested dictionaries with two high level keys: {"data" : {}, "time" :{} }
-		"data" is dictionary containing key : data pairs (list) for each time-series to be processed (of potentially different lengths)
-		"time" is dictionary containing key : timestampe pairs (list) corresponding to timestamps for each list in "data"
-		options (dictionary) - contains options for various methods as follows:
+		"data" : dictionary containing key:data pairs (lists) for each time-series to be processed (of potentially different lengths)
+		(optional) "time" : dictionary containing key:timestampe pairs (lists) corresponding to timestamps for each list in "data"
+		(optional) "options" (dictionary) - contains options for various methods as follows:
 
 		replaceNullData() - options["value"] (float) - single value to be replaced in all time-series input data
 		despikeSeries() - options["window"] (odd-integer) - single integer value to be used for local despike window
@@ -32,79 +33,76 @@
 
 @notes :
 		1) sub key names under top-level key "data" must correspond to same key names under top-level key "time"
-		2) if time-series lengths are different, than registerTime() must be run first before other methods
-		3) if time-series are same length, then any other method can be run independently without running registerTime()
+		2) if time-series lengths are different, registerTime() can be run before other methods to produce equal sampling
+		3) timestamps (if included) can be of type :
+				datetime strings (e.g., '2015-12-09T20:33:04Z')
+				ms since epoch as floats (e.g., 1449257205.0)
+
+				method validateTime() is run on class instantiation to convert any datetime strings to ms since epoch floats
 
 @return : dictionary containing nested dictionaries with two high level keys: {"data" : {}, "time" :{} }
 		"data" is dictionary containing key : data pairs (list) of resulting processed time-series data
 		if registerTime() is run :
-			"time" is dictionary containing sub key "time" with resulting resampled time for all input time series in "data"
+			"time" : list of resulting resampled time shared for all input time series in "data" (ms since epoch format)
 		else :
-			"time" input key "time" is passed to output dictionary key "time"
+			"time" input key "time" is passed to output dictionary key "time" in milliseconds since epoch format
+
+@dependencies :
+		scipy
+		matplotlib
 
 @author michael@glowfish.io
 @date 2016-02-10
 @copyright (c) 2016__. All rights reserved.
 """
 
-# TODO - handle presence of "time" key in input - exception raised if timeRegister calles and no time present
-# TODO - handle timestamp format conversion in init method and replace input "time" key by this
-
-# TODO test case when options are not defined and when they are
-# TODO check for odd/even despike windows input
-# TODO test for input window versus default for unit test
-# TODO test all methods
-# TODO Unit tests
-
 #Externals
+import json
 import numpy as npy
 import time
 from copy import copy, deepcopy
-from scipy.interpolate import griddata, interp1d
-from numpy import empty,arange,exp,real,imag,pi
+from scipy.interpolate import interp1d
 from scipy import signal
-from scipy.cluster.hierarchy import fclusterdata, linkage
-import pyfftw
 import matplotlib.pyplot as plt
-from collections import Counter
 from scipy.signal import savgol_filter
-import mlpy
-
-pyfftw.interfaces.cache.enable()
-
-npy.seterr(all='raise')
-import logging
-glowfish_logger = logging.getLogger('fisherman.lineSinker')
+import dateutil.parser as parser
 
 class signalProcess:
 
-	def __init__(self,data_input,options=None):
 
-		# Initialize class varialbles
+	def __init__(self,data_input,options_in=None):
+
 		self.debug = True
+
+		# Initialize class variables
 		self.small = 1.0e-10
 		self.large = 1.0e+32
 		self.neg = -1.0e+10
+
+		# Initialize default options
 		self.window = None
 		self.value = None
 		self.sample = 1
 
 		"""
-		Interface for signalProcess methods
-
-		If options=None, despikeSeries() will be performed with default window (5 samples), and replaceNullData() will
+		If options=None, despikeSeries() will be performed with default window length (5 samples), registerTime() will be
+		performed with 1:1 sampling (no downsampling), and replaceNullData() will
 		return error.
 
-		else, if options is supplied by input, a dictionary containing the following options is supported:
+		Else, if options is supplied on instantiation, a dictionary containing the following options is supported:
 		key - window : odd integer required
 		key - value : float value required
+		key - sample : integer [1,N] indicating the amount of downsampling (N) desired after optimal re-sampling performed
 
-		:arg data_input input sensor time-series raw data dictionary with high-level keys "data" and "time". "data"
-					has identifier for each series that corresponds to same key names under key "time" containing the
-					timestamps for each series under key "data"
+		:arg data_input : input time-series raw data dictionary with high-level keys "data" and "time" (optional).
+					"data" has identifier for each series that corresponds to same key names under key "time" containing
+					timestamps for each corresponding series under key "data"
 		"""
 
-		# Check for presence of processing options
+		# Validate processing options values if present
+		if self.debug is True:
+			print "Validating processing options\n"
+
 		if options is not None:
 			if 'window'in options:
 				self.window = options['window']
@@ -113,7 +111,16 @@ class signalProcess:
 			if 'sample' in options:
 				self.sample = options['sample']
 
-		self.data = data_input
+		self.data = deepcopy(data_input)
+
+		# Validate timestamp if present, and convert to milliseconds since epoch if format is datetime string
+		if self.data["time"]:
+
+			if self.debug is True:
+				print "Validating Timestamps and Converting to ms since epoch if required\n"
+
+			for time_key in self.data["time"]:
+				self.data["time"][time_key] = self.validateTime(data_input["time"][time_key])
 
 
 	def replaceNullData(self):
@@ -121,7 +128,7 @@ class signalProcess:
 		"""
 		N-dim data series replacement of single self.value float data from series by linear interpolation.
 
-		:arg self.data : dictionary with key "data" - dictionary with key : time-series raw data float lists
+		:var self.data : dictionary with key "data" - dictionary with key : time-series raw data float lists
 						and optionally key "time" (optional) with key : time-series timestamp lists
 		:return datanew : dictionary with key "data - dictionary with key time-series after replacement of self.value
 		"""
@@ -187,9 +194,9 @@ class signalProcess:
 		Data series despiking using Savitsky-Golay filtering, Otsu's method for thresholding, and
 		interpolation for spike data replacement
 
-		:arg self.data : dictionary : multiple time-series lists under key "data", with corresponding key names under
+		:var self.data : dictionary : multiple time-series lists under key "data", with corresponding key names under
 						key "time" with lists of monotonic timestamps sampling for each time-series in key "data"
-		:arg (optional) : self.window : integer : sample length of local despike window (must be odd integer)
+		:var (optional) : self.window : integer : sample length of local despike window (must be odd integer)
 		:return signal_out : dictionary with same keys "data" and "time" of same size as input dictionary but with
 							processed data returned under dictionary "data"
 
@@ -371,17 +378,18 @@ class signalProcess:
 		N-dim data series time registration using linear interpolation. Interpolation made to mean
 		sampling rate of n-dim sensor time-series with outliers removed before mean sample rate is computed.
 
-		:arg self.data : dictionary : multiple time-series lists under key "data", with corresponding key names under
+		:var self.data : dictionary : multiple time-series lists under key "data", with corresponding key names under
 						key "time" with lists of monotonic timestamps sampling for each time-series in key "data"
-		:arg (optional) : self.sample : integer : downsampling factor (default == 1 - no downsampling, 2== 1/2 sampling)
-		:return signal_out : dictionary with same keys "data" and "time" of same size as input dictionary but with
-							processed data returned under dictionary "data"
+		:var (optional) : self.sample : integer : downsampling factor (default == 1 - no downsampling, 2== 1/2 sampling)
 
-		:return datanew : interpolated time-series dictionary key "data" with additional key "time" representing the new
-				timestamp list representing shared time samples for all input time-series keys
-				device_min : minimum of device sample rates
-				device_max : maximum of device sample rates
-				device_delta_t : the resulting mean time delta (sampling rate) for all sensor time-series returned
+		:return datanew : dictionary - interpolated time-series subkeys under key "data" with additional key "time"
+				representing the new timestamp (ms since epoch) list representing shared time samples for all input
+				time-series keys
+
+				sample_param = {"series_min" : device_min, "series_max" : device_max, "series_delta" : device_delta_t}
+				series_min : minimum of all time series sample rates
+				series_max : maximum of all time series sample rates
+				series_delta_t : shared sampling rate for all time-series
 		"""
 
 		try:
@@ -420,6 +428,9 @@ class signalProcess:
 				mask[keys] = all_samples <= max_sample_rate
 				min_sample = npy.max([min_sample,npy.mean(all_samples[mask[keys]])])
 
+			if self.debug is True:
+				print "Mean Sampling Rate: ",min_sample
+
 			# Down sampling if requested by update_dict["sample_rate"]
 			min_sample *= float(sample_rate)
 			dims1a = len(npy.arange(min_start,max_start,min_sample))
@@ -443,6 +454,7 @@ class signalProcess:
 
 				except:
 					sample_indx1 = 0
+
 				try:
 					sample_indx2 = samples.tolist().index(samples[mask_tmp2][0]) - 1	#Subtractred 1 here for edge case 6/23/2106
 				except:
@@ -460,8 +472,9 @@ class signalProcess:
 
 			# Move time samples to single key since they are all the same now
 			datanew['time'] = samples.tolist()
+			sample_param = {"series_min":device_min, "series_max":device_max, "series_delta":device_delta_t}
 
-			return datanew, device_min, device_max, device_delta_t
+			return datanew, sample_param
 
 		except Exception as e:
 			raise Exception (e)
@@ -480,14 +493,13 @@ class signalProcess:
 		try:
 			acf_out = {}
 			for data_key in self.data["data"]:
+				arry = npy.asarray(self.data["data"][data_key])
 				n = len(self.data["data"][data_key])
-				#nlags = n/10
-				#variance = data_in.var()
-				x = self.data["data"][data_key] - self.data["data"][data_key].mean()
+				x =  arry - arry.mean()
 				r = npy.correlate(x, x, mode = 'full')[-n:]
 				acfout = r/npy.max(r)
 
-				acf_out[data_key] = acfout.list()
+				acf_out[data_key] = acfout
 
 			return acf_out
 
@@ -495,7 +507,7 @@ class signalProcess:
 			raise Exception (e)
 
 
-	def getPeriodogram(self,series_in,delta_t,options=None):
+	def getPeriodogram(self):
 
 		"""
 		Compute periodogram of discrete function and return signal to noise, powers, and dominant periods. Used in
@@ -503,14 +515,15 @@ class signalProcess:
 
 		:arg self.data : input time-series dictionary with key : data (list) for each time-series to evaluate
 		:return periods_out : dictionary with high-level keys :
-				"periods" : array of only the dominant periods with signal above 95% noise percentile
-				"pxx_den" : array of only the dominant powers (amplitudes) with signal above 95% noise percentile
-				"s_noise_l" : estimated SNR for input time-series dominant periods
+				"periods" : array of ONLY the dominant periods with signal above 95% percentile noise
+				"all_periods" : array of all periods in time series
+				"pxx_den" : array of all power densities (amplitudes) in series
+				"s_noise_l" : array of estimated SNR for all periods in input time-series
 		"""
 
 		try:
 
-			periods_out = {"periods":{},"pxx_den":{},"s_noise_l":{}}
+			periods_out = {"periods":{},"pxx_den":{},"s_noise_l":{},"all_periods":{}}
 
 			for data_key in self.data["data"]:
 
@@ -541,211 +554,193 @@ class signalProcess:
 				noise = (1/npy.percentile(max_power,50))
 				s_noise_l = Pxx_den*noise
 
-				periods_out["periods"] = npy.asarray(periods)[Pmask][Pmaskf]
-				periods_out["pxx_den"] = Pxx_den[Pmask][Pmaskf]
-				periods_out["s_noise_l"] = s_noise_l
+				periods_out["periods"][data_key] = npy.asarray(periods)[Pmask][Pmaskf]
+				periods_out["all_periods"][data_key] = npy.asarray(periods)
+				periods_out["pxx_den"][data_key] = Pxx_den
+				periods_out["s_noise_l"][data_key] = s_noise_l
 
 		except Exception as e:
 			raise Exception (e)
 
-		#return npy.asarray(periods),Pxx_den,npy.asarray(periods)[Pmask][Pmaskf],Pxx_den[Pmask][Pmaskf],s_noise_l
 		return periods_out
 
 
-	def getPowerDistanceAndSNR(self,tmp0a,periods_indx,periods_old,fullperiods,fullpower,snrL):
-		"""
-		Compute power distance between previous and current periodicity of discrete function by interpolation of current
-		periodogram series to ACF time periods and computing L2 norm of previous states - current states.
-		Also convert input SNR to units: dB.
-
-		:arg tmp0a (list of dominant periods), periods_indx (ist of indexes of dominant periods within entire power series)
-				periods_old (previous periods state computed),fullperiods (full array of periods),fullpower (full array of powers)
-				snrL (input SNR ratio computed from getPeriodogram())
-		:return power_new (computed power distance from previous to current state)
-				periods_new (current dominant periodocity list)
-				snr_new : current SNR in dB
-		"""
-
-		try:
-
-			#Exceptions if no peak period present in input periods list or begining from first call in time-series
-			if periods_old is None:
-
-				if len(tmp0a) == 0:
-
-					snr_new = 0.0
-					period_intr = interp1d(fullperiods,fullpower)
-					periods_new = period_intr(periods_indx)
-					power_dist = 0.0
-
-				else:
-
-					# Interpolate periodicity and SNR series to current ACF time lags for comparison with previous state
-					period_intr = interp1d(fullperiods,fullpower)
-					periods_new = period_intr(tmp0a)
-					snr_intr = interp1d(fullperiods,snrL)
-
-					#dB conversion of SNR
-					snr_new = npy.log10(npy.mean(snr_intr(tmp0a)))*20.0
-					power_dist = 0.0
-
-			else:
-
-				if len(tmp0a) == 0:
-
-					snr_new = 0.0
-					period_intr = interp1d(fullperiods,fullpower)
-					periods_new = period_intr(periods_indx)
-					power_dist = npy.linalg.norm(npy.sqrt(npy.sqrt(npy.asarray(periods_old))))
-
-				else:
-
-					# Interpolate periodogram to currrent ACF time lags for comparison with previous state
-					period_intr = interp1d(fullperiods,fullpower)
-					periods_new = period_intr(tmp0a)
-					snr_intr = interp1d(fullperiods,snrL)
-
-					#dB conversion of SNR
-					snr_new = npy.log10(npy.mean(snr_intr(tmp0a)))*20.0
-					#print npy.linalg.norm(npy.sqrt(npy.asarray(periods_new))-npy.sqrt(npy.asarray(periods_old)))
-					power_dist = npy.linalg.norm(npy.sqrt(npy.asarray(period_intr(periods_indx))) \
-													 -npy.sqrt(npy.asarray(periods_old)))
-
-			power_new = power_dist
-
-			return power_new,periods_new,snr_new
-
-		except Exception as e:
-			raise Exception (e)
-
-
-	def getPrimaryPeriods(self,period,tmp2):
+	def getPrimaryPeriods(self):
 
 		"""
 		Map candidate dominant time-series periods returned by getPeriodogram() to ACF time lags, then determine by first
 		and second derivatives of ACF whether these candidates map to maxima within a local window of ACF series, if so,
-		segment window between +- 1/10 * period to estimate nearest maximum and assign new periods to these ACF maxima.
+		segment window between +- 1/20 * period to estimate nearest maximum and assign new periods to these ACF maxima.
 
 		Method : "On Periodicity Detection and Structural Periodic Similarity", Vlachos, Yu, & Castelli, 2005
 
+		Also returns SNR ratio at primary periods estimated from periodogram by random re-sampling of time-series
+
 		:arg self.data
 		:return periodicity : dictionary containing keys :
-
-				"periods" : dictionary containing final estimated periods list for each input time-series key in self.data["data"]
-				"tmp0c" : dictionary containing indexes (from complete time series) of final periods lists from key "periods"
+			"powers" : dictionary containing final estimated power spectral density at primary periods in key "periods"
+			"periods" : dictionary containing integer primary periods (position in complete time series)
+			"snr" : dictionary containing the signal-noise ratio estimates for each primary period in "periods"
 		"""
 
 		try:
 
-			tmp0 = []
-			tmp0a = []
+			factor = 0.75 	# Set to float greater than 1 to limit ACF maximum window to less than min(period) in list of periods
+			bisects = 40	# Number of bisections over ACF windoe to perform hill-climb search via regression
 
-			# Iterate over all input dominant periods returned by getPeriodogram() and input here
-			tmp8 = []
-			tmp8a = []
-			for value in period:
+			# First estimate candidate periods from periodograms and get ACF for all series in input
+			periods_in = self.getPeriodogram()
+			acf_in = self.getAutocorrelation()
 
-				# Set local ACF search window for determining if derivatives are maximal locally
-				wind2 = range(max([int(value) - int(round(min(period)/2.,0)),int(round(min(period)/2.,0))]),
-				  max([int(value) + int(round(value/20.,0)),int(value) + int(round(min(period)/2.,0))]))
+			periodicity = {"powers":{},"periods":{},"snr":{}}
 
-				err_chk = 1.0e+10
-				valid = False
-				loc = None
-				for k in range(min([18,len(wind2)-2])):	# Perform 10-bisection regression to get optimal split of window
-					a = wind2[0]
-					b = wind2[-1]
-					split = max([len(wind2)/20,1])
-					c = wind2[0] + (split*(k+1))
-					#print int(value),a,b,c,split,k
-					obsT = npy.vstack([npy.asarray(tmp2[a:c]),npy.ones(len(tmp2[a:c]))]).T
-					#print obsT.shape, npy.asfarray(range(a,c))
-					[slope1,inter] = npy.linalg.lstsq(obsT,npy.asfarray(range(a,c)))[0]
-					err1 = npy.linalg.norm(npy.asfarray(range(a,c)) - ((obsT[:,0])*slope1 + inter))
-					obsT = npy.vstack([npy.asarray(tmp2[c:b]),npy.ones(len(tmp2[c:b]))]).T
-					[slope2,inter] = npy.linalg.lstsq(obsT,npy.asfarray(range(c,b)))[0]
-					err2 = npy.linalg.norm(npy.asfarray(range(c,b)) - ((obsT[:,0])*slope2 + inter))
-					#print int(value),a,b,c,slope1,slope2,err1,err2,err1+err2
-					if (err1 + err2) < err_chk:
-						err_chk = (err1 + err2)
-						loc = [a,b,c]
-						if slope1 > 0 and slope2 < 0:
-							valid = True
-						else:
-							valid = False
+			for data_key in self.data["data"]:
 
-				if valid is True:
-					indx1 = npy.argmax([tmp2[m] for m in loc])
-					tmp0.append(tmp2[loc[indx1]])
-					tmp0a.append(loc[indx1])
+				tmp0 = []
+				tmp0a = []
+				tmp8 = []
+				tmp8a = []
 
-				#wind1 = range(max([int(value) - int(round(options["interval"]/8.,0)),int(round(min(period),0))]),
-				#  int(value) + int(round(options["interval"]/2.,0)))				# Derivative window
-				tmp8.append(tmp2[int(value)])
-				tmp8a.append(int(value))
+				# Iterate over all input dominant periods returned by getPeriodogram() and maximize in ACF domain
+				period = periods_in["periods"][data_key]
+				full_periods = periods_in["all_periods"][data_key]
+				powers_in = periods_in["pxx_den"][data_key]
+				snr_in = periods_in["s_noise_l"][data_key]
+				tmp2 = acf_in[data_key]
 
-				# Test if any 2nd derivatives are negative within local window - MAXIMUM in local ACF domain
-				# if any(tmp2gradprime[wind1] < 0.0):
-				# 	# Get max within window of point
-				#
-				# 	tmp0.append(npy.max(tmp2[wind1]))
-				# 	tmp0a.append(tmp2.tolist().index(tmp0[-1]))
-				#
-				# 	#print tmp0a[-1],tmp0[-1]
-				# 	tmp1.append(tmp2[int(value)])
-				# 	tmp1a.append(int(value))
-					
-				# Trim the candidates if close to ACF maxima
-				u, order = npy.unique(tmp0a, return_index=True)
-				tmp0b = list(npy.asarray(tmp0a)[order])
-				#tmp0b = list(tmp2[order])
-				indx_trim = tmp2[tmp0b].tolist()
+				for value in period:
 
-			#print "final",tmp0b,indx_trim
-			t1,t2 = self.getRedundant(tmp0b,indx_trim,tmp2)
-			tmp0c = t1
-			indx_trim2 = t2
-			# Trim periods to resolve and combine periods that are very close / similar
-			# tmp0c = []
-			# indx_trim2 = []
-			# for m,val2 in enumerate(tmp0b[0:-1]):
-			# 	val1 = tmp0b[m+1]
-			# 	if npy.abs(val2 - val1) <= int(round(min(tmp0b)/2.,0)):
-			# 		wind3 = range(min([val2,val1]),max([val2,val1]))
-			# 		print wind3
-			# 		indx_trim2.append(npy.max(tmp2[wind3]))
-			# 		print indx_trim2
-			# 		tmp0c.append(tmp2.tolist().index(indx_trim2[-1]))
-			# 	else:
-			# 		indx_trim2.append(indx_trim[m+1])
-			# 		tmp0c.append(val1)
-				# for n,val3 in enumerate(tmp0b):
-				# 	if npy.abs(val3 - val2) <= int(round(min(tmp0b)/2.,0)) and val3 != val2:
-				# 		wind3 = range(min([val2,val3]),max([val2,val3]))
-				# 		indx_trim[n] = npy.max(tmp2[wind3])
-				# 		tmp0b[n] = tmp2.tolist().index(indx_trim[n])
+					# Set local ACF search window for determining if derivatives are maximal locally
+					wind2 = range(max([int(value) - int(round(min(period)/factor,0)),int(round(min(period)/factor,0))]),
+					  max([int(value) + int(round(value/float(bisects),0)),int(value) + int(round(min(period)/factor,0))]))
 
-			# Listify output
-			#tmp0c = list(set(tmp0b))
-			#indx_trim2 = tmp2[tmp0c].tolist()
-			#print "final2",tmp0c,indx_trim2
-			plt.plot(tmp2)
-			plt.hold(True)
-			#plt.plot(tmp2gradprime[:-5],'r')
-			plt.plot(tmp8a,tmp8,'ro')
-			plt.plot(tmp0c,indx_trim2,'ko')
-			plt.show()
+					if self.debug is True:
+						print "ACF Maxima Window Min & Max:",min(wind2),max(wind2),"\n"
 
-			return tmp0c,indx_trim2
+					err_chk = 1.0e+10
+					valid = False
+					loc = None
+					for k in range(min([bisects-2,len(wind2)-2])):	# Perform 20-bisection regression to get optimal split of window
+						a = wind2[0]					# Set LHS sub-interval bound
+						b = wind2[-1]					# Set RHS sub-interval bound
+						split = max([len(wind2)/bisects,1])	# Determine bisection point of current interval
+						c = wind2[0] + (split*(k+1))	# Set sub-interval middle bound
+						# Perform linear regression over each bisection interval and minimize rmse for optimal split
+						obsT = npy.vstack([npy.asarray(tmp2[a:c]),npy.ones(len(tmp2[a:c]))]).T
+						[slope1,inter] = npy.linalg.lstsq(obsT,npy.asfarray(range(a,c)))[0]
+						err1 = npy.linalg.norm(npy.asfarray(range(a,c)) - ((obsT[:,0])*slope1 + inter))
+						obsT = npy.vstack([npy.asarray(tmp2[c:b]),npy.ones(len(tmp2[c:b]))]).T
+						[slope2,inter] = npy.linalg.lstsq(obsT,npy.asfarray(range(c,b)))[0]
+						err2 = npy.linalg.norm(npy.asfarray(range(c,b)) - ((obsT[:,0])*slope2 + inter))
+
+						# Compute error of regression and determine minimum over all bisections
+						if (err1 + err2) < err_chk:
+							err_chk = (err1 + err2)
+							loc = [a,b,c]
+							if slope1 > 0 and slope2 < 0:		# Check for maximum at split
+								valid = True
+							else:
+								valid = False
+
+						if self.debug is True:
+							print "min err, current error, bisection point",err_chk,err1 + err2,c
+
+					# Check for valid maximum in ACF window for current period
+					if valid is True:
+						indx1 = npy.argmax([tmp2[m] for m in loc])	# Get index of maximum in window
+						tmp0.append(tmp2[loc[indx1]])				# Get ACF maximum
+						tmp0a.append(loc[indx1])
+
+					# If debug, form candidates array for plotting
+					if self.debug is True:
+						tmp8.append(tmp2[int(value)])
+						tmp8a.append(int(value))
+
+				# Get unique candidate period maxima if any exist
+				if any(tmp0):
+					u, order = npy.unique(tmp0a, return_index=True)
+					u_index = list(npy.asarray(tmp0a)[order])
+					u_periods = tmp2[u_index].tolist()
+
+					# Combine periods that are within 1/2 minimum period of each other to shared ACF maximum
+					t1,t2 = self.getRedundant(u_index,u_periods,tmp2)
+					periodicity["powers"][data_key] = powers_in[t1].tolist()
+					periodicity["periods"][data_key] = t1
+
+					# Interpolate SNR data from periodogram domain to ACF domain
+					snr_intr = interp1d(full_periods,snr_in)
+
+					#dB conversion of SNR
+					periodicity["snr"][data_key] = (npy.log10(snr_intr(t1))*20.0).tolist()
+
+					if self.debug is True:
+						print "SNR2",periodicity["snr"][data_key]
+						plt.subplot(2,1,1)
+						plt.plot(tmp2,label="ACF of Input Series")
+						plt.hold(True)
+						plt.plot(tmp8a,tmp8,'ro',label="Candidates Periods")
+						plt.plot(t1,t2,'ko',label="Resulting ACF Periods")
+						plt.legend()
+						plt.subplot(2,1,2)
+						plt.plot(self.data["data"][data_key],label="Input Time Series")
+						plt.hold(True)
+						plt.legend()
+						plt.show()
+				else:
+					periodicity["powers"][data_key] = [None]
+					periodicity["periods"][data_key] = [None]
+					periodicity["snr"][data_key] = [None]
+
+					if self.debug is True:
+						print "No primary periods under Nyquist and above noise were found\n"
+						plt.subplot(2,1,1)
+						plt.plot(tmp2,label="ACF of Input Series")
+						plt.hold(True)
+						plt.plot(tmp8a,tmp8,'ro',label="Candidates Periods")
+						plt.legend()
+						plt.subplot(2,1,2)
+						plt.plot(self.data["data"][data_key],label="Input Time Series")
+						plt.legend()
+						plt.show()
+
+			return periodicity
 
 		except Exception as e:
 			raise Exception (e)
 
-
-	def getRedundant(self,input_indx,input_data,array1):
+	@staticmethod
+	def validateTime(time_list):
 
 		"""
-		Recursion to remove nearly redundant values in periodicity array
+		Helper method to validate timestamp data as milliseconds since epoch (floats), else if datetime strings,
+		then convert to ms time
+
+		:arg time_list: list of timestamps
+		:return: ms_time : list of timestamps in ms since epoch format
+		"""
+
+		try:
+
+			# Validate timestamp format as ms since epoch floats or convert
+			try:
+				ms_time = npy.asfarray(time_list).tolist()
+
+			except ValueError :
+				ms_time = [time.mktime(parser.parse(it).timetuple()) for it in time_list]
+
+			return ms_time
+
+		except Exception as e:
+			raise Exception(e)
+
+
+	@staticmethod
+	def getRedundant(input_indx,input_data,array1):
+
+		"""
+		Recursion helper method for getPrimaryPeriods() to remove nearly redundant values in periodicity array -
+		i.e., periods within 1/2 minimum period of each other in series
+
 		Note: needs some refactoring
 		"""
 
@@ -768,7 +763,7 @@ class signalProcess:
 						else:
 							indx2.append(input_indx[m+2])
 							value2.append(input_data[m+2])
-							indxN,valueN = self.getRedundant(indx2,value2,array1)
+							indxN,valueN = getRedundant(indx2,value2,array1)
 							if npy.abs(indxN[-1] - indx1[-1]) > int(round(min(input_indx)/2.,0)):
 								indx1.append(indxN[-1])
 								value1.append(valueN[-1])
@@ -784,193 +779,49 @@ class signalProcess:
 		return indx1,value1
 
 
-	@staticmethod
-	def plotPOD(datainput,limits=None): #(models,hypmod=None,hypmod2=None):
-
-		"""
-		Genereric plotting method used for QA of sensorProcess class
-		"""
-
-		# Plot the results:
-		fig = plt.figure()
-		plt.hold(True)
-		ct = 0
-
-		color = ['r','k','b','g','y','m','r.','k.','b.','g.','y.','m.','ro','ko','bo','go','yo','mo',
-				 'rx','kx','bx','gx','yx','mx']
-
-		pltnum = len(datainput["data"].keys())
-
-		if "time" in datainput.keys():
-			time1 = npy.asarray(datainput["time"])
-
-		if pltnum < 7:
-			for keyvalue in datainput["data"]:
-
-				model = npy.asarray(datainput["data"][keyvalue])
-
-				plt.subplot(pltnum,1,ct)
-				plt.hold(True)
-				if "match" in datainput.keys():
-
-					model2 = npy.asarray(datainput["match"][keyvalue])
-
-					try:
-						plt.plot(time1,model2,color[1],label=str('Raw Signal-'+keyvalue))
-					except:
-						plt.plot(model2,color[1],label=str('Raw Signal-'+keyvalue))
-
-				if "match2" in datainput.keys():
-
-					model3 = datainput["match2"][keyvalue]
-					try:
-						plt.plot(time1,model3,color[1],label=str('Raw Signal2-'+keyvalue))
-					except:
-						plt.plot(model3,color[1],label=str('Raw Signal2-'+keyvalue))
-				# try:
-				# 	#plt.plot(time1,model,color[0],label=str('New Signal-'+keyvalue))
-				# 	# a_mask = model < .21
-				# 	# b_mask = model >= .21
-				# 	# c_mask = model >= .28
-				# 	# if ct == 1:
-				# 	# 	plt.plot(time1[a_mask],model[a_mask],color[9]) #,label=str('High Health-'+keyvalue))
-				# 	# 	plt.plot(time1[b_mask],model[b_mask],color[10],label=str('Med Health-'+keyvalue))
-				# 	# 	plt.plot(time1[c_mask],model[c_mask],color[6],label=str('Low Health-'+keyvalue))
-				# 	# else:
-				# 	# 	plt.plot(time1[a_mask],model[a_mask],color[9],label=str(keyvalue))
-				# 	# 	plt.plot(time1[b_mask],model[b_mask],color[10])
-				# 	# 	plt.plot(time1[c_mask],model[c_mask],color[6])
-				#
-				# except:
-				plt.plot(model,color[0],label=str('New Signal-'+keyvalue))
-
-				if "anomaly_probability" in datainput.keys():
-					alt_model = npy.asarray(datainput["anomaly_probability"])
-					alt_mask = alt_model > .95
-					try:
-						time1alt = npy.asarray(time1)
-						plt.plot(time1alt[alt_mask],alt_model[alt_mask]*5.0,color[14],label="Alerts")
-					except:
-						plt.plot(alt_model[alt_mask]*5.0,color[14],label="Alerts")
-
-				ct += 1
-				plt.legend(loc=3)
-				if limits is not None:
-					plt.axis(limits)
-		else:
-			for keyvalue in datainput["data"]:
-
-				model = datainput["data"][keyvalue]
-				plt.subplot(6,3,ct)
-				if "match" in datainput.keys():
-					model2 = datainput["match"][keyvalue]
-					try:
-						plt.plot(time1,model2,color[1]) #,label=str('Raw Signal-'+keyvalue))
-					except:
-						plt.plot(model2,color[1])
-
-				try:
-					plt.plot(time1,model,color[0],label=str('Signal-'+keyvalue))
-				except:
-					plt.plot(model,color[0],label=str('Signal-'+keyvalue))
-				plt.hold(True)
-
-				if "anomaly_probability" in datainput.keys():
-					alt_model = npy.asarray(datainput["anomaly_probability"])
-					try:
-						plt.plot(time1,alt_model*10.0,color[1],label="Anomaly_Probability")
-					except:
-						plt.plot(alt_model*10.0,color[1],label="Anomaly_Probability")
-
-				ct += 1
-				plt.legend(loc=1)
-		#plt.axis([0,52000,-10,30])
-		# if hypmod is not None:
-		# 	plt.plot(hypmod,'b-', label='Extracted Signal 1')
-		# if hypmod2 is not None:
-		# 	plt.plot(hypmod2,'g-', label='Extracted Signal 2')
-
-		#ax.set_xlim3d([xmin, xmax])
-		#ax.set_ylim3d([ymin, ymax])
-		#ax.set_xlabel('POD Dim 1')
-		#ax.set_ylabel('POD Dim 2')
-
-		plt.show()
-
-
 if __name__ == "__main__":
 
 	"""
 	Class Level Tests
-	"""
 
-	from sys import argv
-	import json
-	import dateutil.parser as parser
-	from datetime import datetime
+	Run tests for time key or no time key for all routines
+	Run tests for timeRegister of multiple series input
+	Show chaining of methods for despike with sensor13 given min periodicity
+	Run tests for all options
+	Run replacement test
+	Generate plots for some outputs for documentation
+	"""
 
 	run_on = True
 
-	filename = argv[1]
-	file = open(filename,"r")
-	keyname_1 = '573e6cab-dc75-4c77-86e5-2468831098fb'
-	keyname_2 = 'fd56a7e7-ccc7-4263-9a89-05a9cc0eed6f'
-	keyname_3 = 'ec2d3d39-a04a-45ac-b9e0-d755625d7166'
-	#filename2 = argv[2]
-	#file2 = open(filename2,"r")
+	filename = ["device_17_temp","device_13_temp","device_23_temp"]
+	data_in = {"data":{},"time":{}}
+	for name in filename:
+		file1 = open(name+".json","r")
+		data1 = json.load(file1)
+		print len(data1["data_set"][name])
+		data_in["data"][name] = npy.asfarray(data1["data_set"][name][10000:14000]).tolist()
+		data_in["time"][name] = data1["time"][10000:14000]
+
+	print data_in["data"].keys()
+	print data_in["time"].keys()
+
 	t_st = time.time()
 
 	if run_on is True:
-		try:
-			data1 = json.load(file)
-			print data1["data_set"]["device_17_temp"] #,data1["time_since_epoch"]
-			data = {"data_set":{"device_17_temp":npy.asfarray((data1["data_set"]["device_17_temp"])).tolist()},"time":deepcopy(data1["time"])}
-			print len(data["data_set"]["device_17_temp"])
-
-			#data["data_set"].pop("time_since_epoch")
-			#door = json.load(file2)
-
-			# Format time data first
-			time_sec = {}
-			for keyname2 in data["data_set"]:
-
-				#time_sec[keyname2] = data["time"]
-				#print time_sec[keyname2]
-				time_sec[keyname2] = [time.mktime(parser.parse(it).timetuple()) for it in data["time"]]
-
-		except:
-			raise Exception('data file is not present or decodable')
 
 		t_en = time.time()
 		print "Data loading time:",t_en - t_st
 
+		t_st = time.time()
 		options = None
-		lrner = signalProcess(data,options)
+		lrner = signalProcess(data_in,options)
+		output = lrner.getPrimaryPeriods()
+		t_en = time.time()
+		print "Processing Time: ",t_en - t_st," secs\n"
+		print output
 
-		# Stream data to sensorProcess in 4k sample windows
-		sensor_list = data["data_set"].keys()
-		#sensor_list = data["data_set"].keys()[0:-3]
-		#sensor_list = [keyname_1,keyname_2,keyname_3]
-
-	timetemp = []
-	for it in dsp_new["processed_time"]:
-		timetemp.append(datetime.fromtimestamp(int(it)))
-	dsp_new["time"] = timetemp
-
-	# Plot results
-	if dsp_new["return"] is True:
-		groupnew = {}
-		timenew = {}
-		match = {}
-		match2 = {}
-		#for groupname in dsp_new["metrics"]["cluster_group"]:
-		#	groupnew[groupname] = {"data":{},"match":{}}
-		for device in dsp_new["data"]:
-			groupnew[device] = dsp_new["states"]["sensor_performance"][device][:]
-			timenew = dsp_new["processed_time"]
-			match[device] = data["data_set"][device][0:i]
-			match2[device] = dsp_new["states"]["primary_period"][device][:]
-			#match2[device] = dsp_new["states"]["primary_period"][device][:]
-			print npy.mean(match[device]),i
-			print 'length output',len(groupnew[device]),len(match2[device]),len(timenew)
-		lrner.plotPOD({"data":groupnew,"match":match,"match2":match2})
+	# timetemp = []
+	# for it in dsp_new["processed_time"]:
+	# 	timetemp.append(datetime.fromtimestamp(int(it)))
+	# dsp_new["time"] = timetemp
