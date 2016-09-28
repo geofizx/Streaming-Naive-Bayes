@@ -9,7 +9,7 @@ memory efficiently). In this sense, I am hopeful the code will be of use to some
 
 #### Contents
 * [Algorithms](#Algorithms)
-    * [Sparse Grid Sampling/Interpolation/Integration](#Smolyak-Sparse-Grid-Library)
+    * [Sparse Grid Sampling/Interpolation/Integration](/code/Sparse_Grid_Interpolation/README.md)
     * [Signal Processing](#Signal-Processing)
     * [Machine Learning](#Machine-Learning)
 * [Library Usage](#Usage)
