@@ -10,8 +10,8 @@ memory efficiently). In this sense, I am hopeful the code will be of use to some
 #### Contents
 * [Algorithms](#Algorithms)
     * [Sparse Grid Sampling/Interpolation/Integration](/code/Sparse_Grid_Interpolation/README.md)
-    * [Signal Processing](#Signal-Processing)
-    * [Machine Learning](#Machine-Learning)
+    * [Signal Processing](/code/Signal_Processing/README.md)
+    * [Machine Learning](/code/Machine-Learning/README.md)
 * [Library Usage](#Usage)
 * [Running Tests](#Tests)
 * [Contact Me](#Contact)

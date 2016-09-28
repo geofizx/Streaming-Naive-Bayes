@@ -1,4 +1,4 @@
-#Smolyak-Sparse-Grid-Library
+#Smolyak Sparse Grid Library
 This library is an implementation of Smolyak’s Sparse Grid Algorithm for solving integration and interpolation problems
 in d-dim spaces with far fewer function evaluations than needed with traditional tensor production
 integration/interpolation.
@@ -14,8 +14,8 @@ Fejer Polynomials - Coming Soon (open support (-1,1))
 
 **Usage**
 
-See sparse_vals.py __main__ for example usage for sparse-grid interpolation
-See samplers.py __main__ for example usage for sparse-grid, Poisson, and Uniform random sampling grids
+See /tests/ for example usage for sparse-grid interpolation
+See /tests/ for example usage for sparse-grid, Poisson, and Uniform random samplers
 
 **User defined function**
 
