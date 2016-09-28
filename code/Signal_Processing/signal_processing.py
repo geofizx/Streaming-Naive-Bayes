@@ -57,9 +57,7 @@
 """
 
 #Externals
-import json
 import numpy as npy
-import time
 from copy import copy, deepcopy
 from scipy.interpolate import interp1d
 from scipy import signal
@@ -114,14 +112,13 @@ class signalProcess:
 		self.data = deepcopy(data_input)
 
 		# Validate timestamp if present, and convert to milliseconds since epoch if format is datetime string
-		if self.data["time"]:
+		if "time" in self.data:
 
 			if self.debug is True:
 				print "Validating Timestamps and Converting to ms since epoch if required\n"
 
 			for time_key in self.data["time"]:
 				self.data["time"][time_key] = self.validateTime(data_input["time"][time_key])
-
 
 	def replaceNullData(self):
 
@@ -394,13 +391,12 @@ class signalProcess:
 
 		try:
 
-			sample_rate = self.sample
-			dataN = deepcopy(self.data)
-
 			if "time" not in self.data:
 				raise Exception("'time' key with timestamp data must be present for method registerTime")
 
-			datanew = {'data':{},'time':{}}
+			sample_rate = self.sample
+			dataN = deepcopy(self.data)
+			datanew = {'data':{},'time':[]}
 			dims2 = len(self.data['data'].keys())
 
 			key_order = []
@@ -790,6 +786,15 @@ if __name__ == "__main__":
 	Run replacement test
 	Generate plots for some outputs for documentation
 	"""
+	from datetime import datetime
+	import json
+	import time
+	import matplotlib.pyplot as plt
+
+# TODO change test data filenames and relative paths
+# TODO Move unit tests to /tests directory
+# TODO Move datetimes around in test file to get them to overlap for the most part - then run registerTime tests
+# TODO Write readme file with tests and some plots
 
 	run_period = False
 	run_time_register = True
@@ -799,24 +804,18 @@ if __name__ == "__main__":
 	print "Loading some time-series data\n"
 	t_st = time.time()
 
-	filename = ["device_17_temp","device_13_temp","device_23_temp"]
+	filename = "/workspace/Sampling-Integration-Interpolation/tests/three_time_series_data.json"
 	data_in = {"data":{},"time":{}}
-	for name in filename:
-		file1 = open(name+".json","r")
-		data1 = json.load(file1)
-		print len(data1["data_set"][name])
-		data_in["data"][name] = npy.asfarray(data1["data_set"][name][10000:14000]).tolist()
-		data_in["time"][name] = data1["time"][10000:14000]
+	file1 = open(filename,"r")
+	data1 = json.load(file1)
+	for name in data1["data"]:
+		data_in["data"][name] = npy.asfarray(data1["data"][name]).tolist()
+		data_in["time"][name] = data1["time"][name]
 
-	file3 = open("three_time_series_data.json","w")
-	json.dump(data_in,file3)
-	file3.close()
-
-	print data_in["data"].keys()
-	print data_in["time"].keys()
+	print "Time-Series Labels: ",data_in["data"].keys()
 
 	t_en = time.time()
-	print "Data loading time:",t_en - t_st
+	print "Data Load Time:",t_en - t_st,"\n"
 
 	if run_period is True:
 
@@ -829,7 +828,25 @@ if __name__ == "__main__":
 		print output
 
 	if run_time_register is True:
-		pass
+		t_st = time.time()
+		options = {"sample":1}
+		lrner = signalProcess(data_in,options)
+		data_out, params_out = lrner.registerTime()
+		t_en = time.time()
+		print "Processing Time: ",t_en - t_st," secs\n"
+		print data_in["data"].keys()
+		# plot before and after
+		datetime_vals = [datetime.fromtimestamp(int(it)) for it in data_out["time"]]
+		for key in data_out["data"]:
+			plt.subplot(2,1,1)
+			plt.hold(True)
+			#plt.plot(data_in["time"][key],data_in["data"][key],label=key)
+			#plt.legend()
+			plt.subplot(2,1,2)
+			plt.hold(True)
+			plt.plot(datetime_vals,data_out["data"][key],label=key)
+			plt.legend()
+		plt.show()
 
 	# timetemp = []
 	# for it in dsp_new["processed_time"]:
