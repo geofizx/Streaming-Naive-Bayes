@@ -7,13 +7,21 @@ In most cases, I have implemented algorithms that are not readily available thro
 cases, the algorithms may be well known, but I have implemented them in a different way (e.g., streaming, adaptively, or
 memory efficiently). In this sense, I am hopeful the code will be of use to some people.
 
-*Algorithms*
+#### Contents
+* [Endpoint of Things](#Algorithms)
+  * [Creating an Endpoint of the Things](#Usage)
+  * [Validating an Endpoint of the Things](#Tests)
+  * [Dispatching of the Things](#Contact)
+
+
+#### Algorithms ####
 
 Below is a list of the classes and methods contained in this repo along with a brief description of the algorithms.
 
-*Usage*
+#### Usage ####
 
-*Contact Info*
+#### Tests ####
 
+#### Contact ####
 If you want to reach out to me about any questions, issues, or anything else, email me at michael[at]glowfish[dot]io
 
