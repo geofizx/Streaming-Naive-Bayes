@@ -1,4 +1,4 @@
-#Smolyak Sparse Grid Library
+#Smolyak-Sparse-Grid-Library
 This library is an implementation of Smolyak’s Sparse Grid Algorithm for solving integration and interpolation problems
 in d-dim spaces with far fewer function evaluations than needed with traditional tensor production
 integration/interpolation.
