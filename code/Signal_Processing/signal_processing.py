@@ -57,6 +57,7 @@
 """
 
 #Externals
+import time
 import numpy as npy
 from copy import copy, deepcopy
 from scipy.interpolate import interp1d
@@ -101,19 +102,19 @@ class signalProcess:
 		if self.debug is True:
 			print "Validating processing options\n"
 
-		if options is not None:
-			if 'window'in options:
-				self.window = options['window']
-			if 'value' in options:
-				self.value = options['value']
-			if 'sample' in options:
-				self.sample = options['sample']
+		if options_in is not None:
+			if 'window'in options_in:
+				self.window = options_in['window']
+			if 'value' in options_in:
+				self.value = options_in['value']
+			if 'sample' in options_in:
+				self.sample = options_in['sample']
 
 		self.data = deepcopy(data_input)
 
 		# Validate timestamp if present, and convert to milliseconds since epoch if format is datetime string
 		if "time" in self.data:
-
+			print self.data.keys(),data_input.keys()
 			if self.debug is True:
 				print "Validating Timestamps and Converting to ms since epoch if required\n"
 
@@ -143,11 +144,12 @@ class signalProcess:
 			# Index any samples == self.value for each time-series in input dictionary
 			for m,keys in enumerate(dataN['data']):
 				samples = range(0,len(dataN['data'][keys]))
-				times = npy.asfarray(dataN['time'])
+				times = npy.asfarray(dataN['time'][keys])
 				tmp_array = npy.zeros(shape=(len(samples)),dtype=float)
-				inx_null = [g for g in samples if dataN['data'][keys][g] - (self.value) <= self.small]
-				inx_ok = [g for g in samples if dataN['data'][keys][g] - (self.value) > 1]
-
+				inx_null = [g for g in samples if npy.abs(dataN['data'][keys][g] - self.value) <= self.small]
+				inx_ok = [g for g in samples if npy.abs(dataN['data'][keys][g] - self.value) > 1]
+				print inx_null
+				print inx_ok
 				if len(inx_null) == 0:	# No replaced values in returned series
 					tmp_array[:] = dataN['data'][keys]
 
@@ -168,9 +170,9 @@ class signalProcess:
 						dataN['data'][keys][-1] = dataN['data'][keys][inx_ok[-1]]
 
 					# Re-index replaced values with lower/upper bounds set from above
-					inx_mod = [g for g in samples if dataN['data'][keys][g] - (self.value) > 1]
+					inx_mod = [g for g in samples if npy.abs(dataN['data'][keys][g] - self.value) > 1]
 
-					# Handle interior points with cubic spline interpolant
+					# Handle interior points with linear interpolant
 					signal_intrp = interp1d(times[inx_mod],npy.asfarray(dataN['data'][keys])[inx_mod])
 					tmp_array = signal_intrp(times)
 
@@ -424,8 +426,9 @@ class signalProcess:
 				mask[keys] = all_samples <= max_sample_rate
 				min_sample = npy.max([min_sample,npy.mean(all_samples[mask[keys]])])
 
-			if self.debug is True:
-				print "Mean Sampling Rate: ",min_sample
+				if self.debug is True:
+					print "Mean Sampling Rate: ",min_sample
+					print "Device Mean Sampling Rate: ",keys,npy.mean(all_samples[mask[keys]])
 
 			# Down sampling if requested by update_dict["sample_rate"]
 			min_sample *= float(sample_rate)
@@ -779,72 +782,6 @@ if __name__ == "__main__":
 	"""
 	Class Level Tests
 
-	Run tests for time key or no time key for all routines
-	Run tests for timeRegister of multiple series input
-	Show chaining of methods for despike with sensor13 given min periodicity
-	Run tests for all options
-	Run replacement test
-	Generate plots for some outputs for documentation
+	See /tests/signal_processing_tests.py for unit tests for this class
+
 	"""
-	from datetime import datetime
-	import json
-	import time
-	import matplotlib.pyplot as plt
-
-# TODO change test data filenames and relative paths
-# TODO Move unit tests to /tests directory
-# TODO Move datetimes around in test file to get them to overlap for the most part - then run registerTime tests
-# TODO Write readme file with tests and some plots
-
-	run_period = True
-	run_time_register = True
-	run_depike = False
-	run_replace = False
-
-	print "Loading some time-series data\n"
-	t_st = time.time()
-
-	filename = "/workspace/Sampling-Integration-Interpolation/tests/three_time_series_data.json"
-	data_in = {"data":{},"time":{}}
-	file1 = open(filename,"r")
-	data1 = json.load(file1)
-	for name in data1["data"]:
-		data_in["data"][name] = npy.asfarray(data1["data"][name]).tolist()
-		data_in["time"][name] = data1["time"][name]
-
-	print "Time-Series Labels: ",data_in["data"].keys()
-
-	t_en = time.time()
-	print "Data Load Time:",t_en - t_st,"\n"
-
-	if run_period is True:
-
-		t_st = time.time()
-		options = None
-		lrner = signalProcess(data_in,options)
-		output = lrner.getPrimaryPeriods()
-		t_en = time.time()
-		print "Processing Time: ",t_en - t_st," secs\n"
-		print output
-
-	if run_time_register is True:
-		t_st = time.time()
-		options = {"sample":1}
-		lrner = signalProcess(data_in,options)
-		data_out, params_out = lrner.registerTime()
-		t_en = time.time()
-		print "Processing Time: ",t_en - t_st," secs\n"
-		print data_in["data"].keys()
-		# plot before and after
-
-		datetime_vals = [datetime.fromtimestamp(int(it)) for it in data_out["time"]]
-		for key in data_out["data"]:
-			plt.hold(True)
-			plt.plot(datetime_vals,data_out["data"][key],label=key)
-			plt.legend()
-		plt.show()
-
-	# timetemp = []
-	# for it in dsp_new["processed_time"]:
-	# 	timetemp.append(datetime.fromtimestamp(int(it)))
-	# dsp_new["time"] = timetemp
