@@ -15,5 +15,5 @@ Below is a list of the classes and methods contained in this repo along with a b
 
 *Contact Info*
 
-If you have want to reach out to me about any questions, issues, or anything else, email me at michael[at]glowfish[dot]io
+If you want to reach out to me about any questions, issues, or anything else, email me at michael[at]glowfish[dot]io
 
