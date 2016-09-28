@@ -325,61 +325,6 @@ class ndSampler:
 
 if __name__ == "__main__":
 
-	import matplotlib.pyplot as pl
-
 	"""
-	2D unit tests for sampling methods
+	See /tests/sparse_grid_interp_tests.py for 2D usage and unit tests for this class
 	"""
-
-	#unit = "Clenshaw"
-	unit = "Chebyshev"
-	#unit = "Poisson Disk"
-	#unit = "Uniform Random"
-
-	if unit == "Poisson Disk":
-		num = 400		# Number of samples to draw
-		dim1 = 2		# Dimensionality of space
-		sample = ndSampler(num/2,dim1)
-		candidates = 20	# Number of candidate samples for each numsim iteration of sampler
-		points1 = sample.poissondisk(candidates)
-		sample = ndSampler(num,dim1)
-		points2 = sample.poissondisk(candidates)
-		label1 = str(num/2)+" Samples"
-		label2 = str(num)+" Samples"
-
-	elif unit == "Chebyshev":
-		num = 4			# Degree of polynomial to compute
-		dim1 = 2		# Dimensionality of space
-		sample = ndSampler(num,dim1)
-		points1,mi0,indx0 = sample.sparse_sample("CH")
-		sample = ndSampler(num/2,dim1)
-		points2,mi0,indx0 = sample.sparse_sample("CH")
-		label1 = "Degree:"+str(num)+" Nodes"
-		label2 = "Degree:"+str(num/2)+" Nodes"
-
-	elif unit == "Clenshaw":
-		num = 4			# Degree of polynomial to compute
-		dim1 = 2		# Dimensionality of space
-		sample = ndSampler(num,dim1)
-		points1,mi0,indx0 = sample.sparse_sample("CC")
-		sample = ndSampler(num/2,dim1)
-		points2,mi0,indx0 = sample.sparse_sample("CC")
-		label1 = "Degree:"+str(num)+" Nodes"
-		label2 = "Degree:"+str(num/2)+" Nodes"
-
-	elif unit == "Uniform Random":
-		num = 400		# Number of samples to draw
-		dim1 = 2		# Dimensionality of space
-		sample = ndSampler(num/2,dim1)
-		points1 = sample.unfrm()
-		sample = ndSampler(num,dim1)
-		points2 = sample.unfrm()
-		label1 = str(num/2)+" Samples"
-		label2 = str(num)+" Samples"
-
-	pl.plot(points1[:,0],points1[:,1],'ro',label=label1)
-	pl.hold(True)
-	pl.plot(points2[:,0],points2[:,1],'bo',label=label2)
-	pl.title(unit+" Samples")
-	pl.legend()
-	pl.show()
