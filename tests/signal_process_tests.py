@@ -26,7 +26,7 @@ from Signal_Processing import signalProcess
 # Determine which tests will be run with bools
 run_period = False
 run_time_register = False
-run_depike = False
+run_depike = True
 run_replace = False
 
 print "Loading some time-series data\n"

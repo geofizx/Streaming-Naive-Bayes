@@ -9,7 +9,7 @@ replaceNullData - method for simple replacement of a single known amplitude from
 
 despikeSeries - method for adaptive despiking with minimal distortion using Savitsky-Golay filtering, Otsu's method for
                 thresholding, and interpolation for spike data replacement. Threshold seeks to maximize inter-class
-                variance between "spike" class and "normal" class.
+                variance between "spike" class and "normal" class. Adapted from Feuerstein et al.
 
 registerTime - method for multiple time series time registration using linear interpolation. Interpolation made to
                mean sampling rate of n-dim sensor time series with outliers removed before mean sample rate is computed.
@@ -17,6 +17,19 @@ registerTime - method for multiple time series time registration using linear in
 getPrimaryPeriods - method for automatically picking primary periods from multiple input series based on
                 collaboration between periodogram and auto-correlation function to tolerate long + short periodicities
                 (See Vlachos, Yu, & Castelli, 2005). Also returns SNR for each resulting primary periods.
+
+getAutocorrelation - helper method to compute auto-correlation function for each 1-D series (lists) used in conjunction
+		        with power spectrum (getPeriodogram) to solve for optimal periodicity in time-series window
+
+getPeriodogram - helper method to compute periodogram of discrete function and return signal to noise, powers, and dominant periods.
+                Used in conjunction with ACF (getAutocorrelation) method to solve for signal periodicity.
+
+validateTime - helper method to validate/convert timestamps to ms since epoch from input timestamps. This library accepts
+                times in datetime string or millisecond since epoch float form.
+
+getRedundant - helper method for getPrimaryPeriods() to remove nearly redundant periods in periodicity array -
+		        i.e., periods within 1/2 minimum period of each other in series will resolve to their shared maximum.
+
 
 ####input####
     data_input (dictionary) - contains nested dictionaries with two high level keys: {"data" : {}, "time" :{}}
@@ -54,3 +67,6 @@ See /tests/signal_process_tests.py for example usage for methods implemented her
 
 ####References####
     Vlachos, Yu, & Castelli, 2005, "On Periodicity Detection and Structural Periodic Similarity"
+    Feuerstein, Parker, & Boutelle, "Practical Methods for Noise Removal: Applications to Spikes, Nonstationary
+                                    Quasi-Periodic Noise, and Baseline Drift"
+

@@ -70,7 +70,7 @@ class signalProcess:
 
 	def __init__(self,data_input,options_in=None):
 
-		self.debug = True
+		self.debug = False
 
 		# Initialize class variables
 		self.small = 1.0e-10
