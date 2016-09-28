@@ -17,9 +17,9 @@ memory efficiently). In this sense, I am hopeful the code will be of use to some
 * [Contact Me](#Contact)
 
 
-#### Algorithms ####
+#### Libraries ####
 
-Below is a list of the classes and methods contained in this repo along with a brief description of the algorithms.
+Below is a list of the libraries contained in this repo along with links to README files.
 
 #### Sparse-Grids ####
 
