@@ -796,7 +796,7 @@ if __name__ == "__main__":
 # TODO Move datetimes around in test file to get them to overlap for the most part - then run registerTime tests
 # TODO Write readme file with tests and some plots
 
-	run_period = False
+	run_period = True
 	run_time_register = True
 	run_depike = False
 	run_replace = False
@@ -836,13 +836,9 @@ if __name__ == "__main__":
 		print "Processing Time: ",t_en - t_st," secs\n"
 		print data_in["data"].keys()
 		# plot before and after
+
 		datetime_vals = [datetime.fromtimestamp(int(it)) for it in data_out["time"]]
 		for key in data_out["data"]:
-			plt.subplot(2,1,1)
-			plt.hold(True)
-			#plt.plot(data_in["time"][key],data_in["data"][key],label=key)
-			#plt.legend()
-			plt.subplot(2,1,2)
 			plt.hold(True)
 			plt.plot(datetime_vals,data_out["data"][key],label=key)
 			plt.legend()
