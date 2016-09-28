@@ -11,7 +11,7 @@ memory efficiently). In this sense, I am hopeful the code will be of use to some
 * [Algorithms](#Algorithms)
     * [Sparse Grid Sampling/Interpolation/Integration](/code/Sparse_Grid_Interpolation/README.md)
     * [Signal Processing](/code/Signal_Processing/README.md)
-    * [Machine Learning](/code/Machine-Learning/README.md)
+    * [Machine Learning](/code/Machine_Learning/README.md)
 * [Library Usage](#Usage)
 * [Running Tests](#Tests)
 * [Contact Me](#Contact)
