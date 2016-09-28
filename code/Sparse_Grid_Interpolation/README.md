@@ -12,17 +12,17 @@ Chebyshev Polynomials – Cos Basis Functions (sup. [0,1])
 
 Fejer Polynomials - Coming Soon (open support (-1,1))
 
-**Usage**
+####Usage####
 
-See /tests/ for example usage for sparse-grid interpolation
-See /tests/ for example usage for sparse-grid, Poisson, and Uniform random samplers
+See /tests/sparse_grid_interp_tests.py for example usage for sparse-grid interpolation
+See /tests/grid_random_sampler_tests.py for example usage for sparse-grid, Poisson, and Uniform random samplers
 
-**User defined function**
+####User defined function####
 
 fun_nd.py provides example code that evaluates functions in 2D for a given test function. The user must specify a
 new funtion fun_nd.py that follows this same format and evaluates n-dim target functions desired for interpolation.
 
-**Smolyak’s Sparse Grid Algorithm**
+####Smolyak’s Sparse Grid Algorithm####
 
 One approach to solving numerical integration (or polynomial interpolation) is to use 1D Gauss quadrature rules
 (or Gauss-Hermite polynomials) that are applied separately to each dimension, forming a tensor-product rule. However,
@@ -50,7 +50,7 @@ higher dimensions. There are several other choices of 1D quadrature rules that e
 as the Chebyshev and Clenshaw-Curtis formulae, which for higher dimensions provide rules with orders of magnitude fewer
 points than those for tensor-product rules when the abscissae properties are chosen well (Xiu, 2007).
 
-**References**
+####References####
 
 Barthelmann, V., E. Novak, and K. Ritter, 2000, High dimensional polynomial interpolation on sparse grids,
 Adv. in Comput. Math., 12, 273–288.

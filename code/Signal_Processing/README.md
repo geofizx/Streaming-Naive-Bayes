@@ -16,7 +16,7 @@ registerTime - method for multiple time series time registration using linear in
 
 getPrimaryPeriods - method for automatically picking primary periods from multiple input series based on
                 collaboration between periodogram and auto-correlation function to tolerate long + short periodicities
-                Also returns SNR for each resulting primary periods.
+                (See Vlachos, Yu, & Castelli, 2005). Also returns SNR for each resulting primary periods.
 
 ####input####
     data_input (dictionary) - contains nested dictionaries with two high level keys: {"data" : {}, "time" :{}}
@@ -45,5 +45,12 @@ getPrimaryPeriods - method for automatically picking primary periods from multip
     else :
         "time" input key "time" is passed to output dictionary key "time" in milliseconds since epoch format
 
+####Usage####
+
+See /tests/signal_process_tests.py for example usage for methods implemented here
+
 ####dependencies####
     scipy
+
+####References####
+    Vlachos, Yu, & Castelli, 2005, "On Periodicity Detection and Structural Periodic Similarity"

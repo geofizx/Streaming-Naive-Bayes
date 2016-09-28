@@ -223,7 +223,7 @@ class signalProcess:
 		# Despike all series in input dictionary
 		for data_key in self.data["data"]:
 
-			try:		# Exception handling for any single time-series containing same value for entire list
+			try:	# Exception handling for any single time-series containing same value for entire list
 
 				# Copy of input signal for spike replacement
 				sigint2 = npy.asfarray(self.data["data"][data_key])
