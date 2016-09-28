@@ -734,8 +734,7 @@ class signalProcess:
 			raise Exception(e)
 
 
-	@staticmethod
-	def getRedundant(input_indx,input_data,array1):
+	def getRedundant(self,input_indx,input_data,array1):
 
 		"""
 		Recursion helper method for getPrimaryPeriods() to remove nearly redundant values in periodicity array -
@@ -763,7 +762,7 @@ class signalProcess:
 						else:
 							indx2.append(input_indx[m+2])
 							value2.append(input_data[m+2])
-							indxN,valueN = getRedundant(indx2,value2,array1)
+							indxN,valueN = self.getRedundant(indx2,value2,array1)
 							if npy.abs(indxN[-1] - indx1[-1]) > int(round(min(input_indx)/2.,0)):
 								indx1.append(indxN[-1])
 								value1.append(valueN[-1])
@@ -792,7 +791,13 @@ if __name__ == "__main__":
 	Generate plots for some outputs for documentation
 	"""
 
-	run_on = True
+	run_period = False
+	run_time_register = True
+	run_depike = False
+	run_replace = False
+
+	print "Loading some time-series data\n"
+	t_st = time.time()
 
 	filename = ["device_17_temp","device_13_temp","device_23_temp"]
 	data_in = {"data":{},"time":{}}
@@ -803,15 +808,17 @@ if __name__ == "__main__":
 		data_in["data"][name] = npy.asfarray(data1["data_set"][name][10000:14000]).tolist()
 		data_in["time"][name] = data1["time"][10000:14000]
 
+	file3 = open("three_time_series_data.json","w")
+	json.dump(data_in,file3)
+	file3.close()
+
 	print data_in["data"].keys()
 	print data_in["time"].keys()
 
-	t_st = time.time()
+	t_en = time.time()
+	print "Data loading time:",t_en - t_st
 
-	if run_on is True:
-
-		t_en = time.time()
-		print "Data loading time:",t_en - t_st
+	if run_period is True:
 
 		t_st = time.time()
 		options = None
@@ -820,6 +827,9 @@ if __name__ == "__main__":
 		t_en = time.time()
 		print "Processing Time: ",t_en - t_st," secs\n"
 		print output
+
+	if run_time_register is True:
+		pass
 
 	# timetemp = []
 	# for it in dsp_new["processed_time"]:
