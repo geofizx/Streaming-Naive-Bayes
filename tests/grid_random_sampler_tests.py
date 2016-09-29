@@ -21,10 +21,10 @@ import matplotlib.pyplot as pl
 from Sparse_Grid_Interpolation import ndSampler
 
 # Determine which tests will be run with bools
-Poisson = True
+Poisson = False
 Chebyshev = True
-Clenshaw = True
-Uniform = True
+Clenshaw = False
+Uniform = False
 
 if Poisson is True:
 	num = 400		# Number of samples to draw
