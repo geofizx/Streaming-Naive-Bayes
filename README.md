@@ -14,7 +14,7 @@ memory efficiently). In this sense, I am hopeful the code will be of use to some
     * [Machine Learning](/code/Machine_Learning/README.md)
 
 #### License ####
-* [MIT License](/code/LICENSE.md)
+* [MIT License](LICENSE.md)
 
 #### Contact ####
 If you want to reach out to me about any questions, issues, or anything else, email me at michael[at]glowfish[dot]io
