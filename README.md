@@ -7,8 +7,7 @@ In most cases, I have implemented algorithms that are not readily available thro
 cases, the algorithms may be well known, but I have implemented them in a different way (e.g., streaming, adaptively, or
 memory efficiently). In this sense, I am hopeful the code will be of use to some people.
 
-#### Contents ####
-* Algorithms, Usage, and Running Tests
+####Algorithms, Usage, and Running Code####
     * [Sparse Grid Sampling/Interpolation/Integration](/code/Sparse_Grid_Interpolation/README.md)
     * [Signal Processing](/code/Signal_Processing/README.md)
     * [Machine Learning](/code/Machine_Learning/README.md)
