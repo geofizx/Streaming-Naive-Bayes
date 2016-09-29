@@ -50,9 +50,8 @@
 @dependencies :
 		scipy
 
-@author michael@glowfish.io
-@date 2016-02-10
-@copyright (c) 2016__. All rights reserved.
+@author Michael Tompkins
+@copyright 2016
 """
 
 #Externals

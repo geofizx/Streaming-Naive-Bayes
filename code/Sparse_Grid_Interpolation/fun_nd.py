@@ -7,8 +7,8 @@
 Example function evaluation function for use with sparse_vals class
 Perform some simple 2D function evaluations for running sparse_vals interpolation tests
 
-@author Michael Tompkins on 2016_09_24.
-@copyright (c) 2016 All rights reserved.
+@author Michael Tompkins
+@copyright 2016
 """
 
 import numpy as npy

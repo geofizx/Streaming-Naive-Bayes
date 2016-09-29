@@ -5,19 +5,19 @@
 @desciption
 
 Class to perform hierarchical sparse-grid polynomial interpolation at multiple grid levels using
-either piece-wise linear Clenshaw-Curtis (type = 'CC') or Chebyshev polynomial (type = 'CH') basis functions at
+either piece-wise linear Clenshaw-Curtis (type0 = 'CC') or Chebyshev polynomial (type0 = 'CH') basis functions at
 sparse grid nodes specified by max degree (i.e., level) of interpolation and dimensionality of space.
 
 Early stopping is implemented when absolute error at any level is less than tol
 
 @usage
-[ip2,wk,werr,meanerr] = sparse_vals(maxn,d,type,intvl,fun_nd,grdout)
+[ip2,wk,werr,meanerr] = sparse_vals(maxn,d,type0,intvl,fun_nd,grdout)
 
 	:arg
 
 	maxn : integer : maxlevel of interpolation depth
 	d : integer : dimension of interpolation
-	type : string : polynomial : piece-wise linear (type = 'CC') or Chebyshev polynomial (type = 'CH') to use for interpolation
+	type0 : string : polynomial : piece-wise linear (type0 = 'CC') or Chebyshev polynomial (type0 = 'CH') to use for interpolation
 	intvl : 2 x d array : interval other than [0 1] for each dimension over which to compute sparse grids
 	fun_nd : function : user-defined function used to evaluate the target function at sparse grid nodes
 	grdout : N x d array : desired N points in d-dimensions to interpolate to
@@ -32,16 +32,13 @@ Early stopping is implemented when absolute error at any level is less than tol
 samplers.py - Companion script for computing sparse grid node points
 spinterp.py - Companion script for computing interpolation at each hierarchical level
 
-This script also calls function rmsint.m which queries "fun_nd" for the
-RMS misfit values for models at sparse grid points [grdin]
-
 @references
 See Klemke, A. and B. Wohlmuth, 2005, Algorithm 847: spinterp: Piecewise
 Multilinear Hierarchical Sparse Grid Interpolation in MATLAB,
 ACM Trans. Math Soft., 561-579.
 
-@author Michael Tompkins in 2012.
-@copywrite (c) 2016 All rights reserved.
+@author Michael Tompkins
+@copyright 2016
 """
 
 # Externals
@@ -63,7 +60,7 @@ class sparseInterp():
 		:arg type0 : string specifies base polynomial for interpolation (Chebyshev = "CH", Clenshaw-Curtis - "CC")
 		:return : ip2 : array-type (N,d) of interpolated function values
 
-		options - verbose : turn on (True) or off (False) print statements
+		options - debug : turn on (True) or off (False) print statements
 		"""
 
 		self.grdout = grdout			# User specified output grid points to interpolate function to
@@ -71,7 +68,7 @@ class sparseInterp():
 		self.d = dimensions				# Number of dimensions of interpolation
 		self.dim1 = grdout.shape[0]		# Number of samples for output
 		self.dim2 = grdout.shape[1]		# Dimensionality of interpolation
-		self.verbose = False			# Include print statements to stdout
+		self.debug = False				# Include print statements to stdout
 		self.debug = 0					# 0 = user defined function used, 1 = unit test fun2d used
 		self.tol = 0.001				# Early stopping criteria
 		self.type = type0				# Type of polynomial to perform interpolation
@@ -84,11 +81,9 @@ class sparseInterp():
 		"""
 
 		grdout = self.grdout
-		type = self.type
 		intvl = self.intvl
 		maxn = self.maxn
 		d = self.d
-		debug = self.debug
 		num2 = self.dim1								# Number of points to interpolate on user input grid
 		ip2 = npy.zeros(shape=num2,dtype=float)			# Initialize final interpolated array
 		ipmj = npy.zeros(shape=num2,dtype=float)		# Initialize d-variate interpolant array
@@ -109,12 +104,9 @@ class sparseInterp():
 			"""
 			Determine index sets and sparse grid nodes for each grid level k and dimension d, type of interpolation,
 			and interval [0 1]
-			See <help mjgrid> for description of these parameters
-			#[grdin,indx,mi] = mjgrid(k,d,type,[0,1])
 			"""
-
 			samp = samplers.ndSampler(k,d)					# Instantitate sampler class for current level k (degree) of interpolation
-			grdin,mi,indx = samp.sparse_sample(type)		# Compute polynomial nodes for each level k of interpolation
+			grdin,mi,indx = samp.sparse_sample(self.type)		# Compute polynomial nodes for each level k of interpolation
 
 			if k == 0:
 				indx = indx[npy.newaxis,:]		# Add dimension when 1-D array returned for level 0 grid
@@ -124,13 +116,13 @@ class sparseInterp():
 				range1 = abs( min(intvl[:,i]) - max(intvl[:,i]) )
 				grdin[:,i] = grdin[:,i]*range1 + min(intvl[:,i])
 
-			grdbck[k] = grdin          # Back storage of grid k, for access later
-			indxbck[k] = indx          # Back storage of index array at level k
-			mibck[k] = mi              # Back storage of node number array
-			num4 = indx.shape[0]		# # of multi-indices to compute cartesian products
-			wght = npy.zeros(shape=(num4,d),dtype=float) # Initialize weights for current level k
-			wght2 = npy.ones(shape=(num4),dtype=float)
-			polyw = npy.zeros(shape=(num4,d),dtype=float)
+			grdbck[k] = grdin          					# Back storage of grid k
+			indxbck[k] = indx							# Back storage of multi-index array at level k
+			mibck[k] = mi								# Back storage of node number array
+			num4 = indx.shape[0]						# Number of multi-indices to compute cartesian products
+			wght = npy.zeros(shape=(num4,d),dtype=float)	# Initialize weights for CC current level k
+			wght2 = npy.ones(shape=(num4),dtype=float)		# Interpolation weights
+			polyw = npy.zeros(shape=(num4,d),dtype=float)	# Initialize weights for CH current level k
 
 			# Determine function values at current kth sparse grid nodes using user-defined function fun_nd
 			try:
@@ -141,31 +133,31 @@ class sparseInterp():
 			# Initialize surpluses to current grid node values
 			zk = yk[k]
 
-			# Now compute hierarchical surpluses by subtracting interpolated values
-			# of current grid nodes (interp(grdin)) computed at grid level k-1 interpolant
-			# from current function values (fun(x)) computed at current grid level, k.
-			# e.g., zk(@ k=2) = fun(grdin, @k=2) - interp(grdin, @k=1)
-			#
+			# Compute hierarchical surpluses by subtracting interpolated values of current grid nodes runInterp(grdin)
+			# computed at grid level k-1 interpolant from current function values (fun_nd(x)) computed at current grid
+			# level, k, e.g., zk(@ k=2) = fun_nd(grdin, @k=2) - runInterp(grdin, @k=1)
+
 			# This allows for the determination of error at each grid level and a simpler implementation
 			# of the muti-variate interpolation at various Smoyak grid levels.
 			if k > 0:
 				if werr[k-1] < tol:       # Stop criteria based on average surplus error
-					print 'Mean error tolerance met at Grid Level...',str(k-1)
+					if self.debug is True:
+						print 'Mean error tolerance met at Grid Level...',str(k-1)
 					return ip2,meanerr,werr
 				else:
 					for m in range(0,k): #i=0:k-1          # Must loop over all levels to get complete interpolation (@ k-1)
-						runterp = spinterp.runInterp(d,wk[m],grdbck[m],grdin,indxbck[m],mibck[m],type,intvl)
+						runterp = spinterp.runInterp(d,wk[m],grdbck[m],grdin,indxbck[m],mibck[m],self.type,intvl)
 						zk -= runterp
 
 			# Loop over indices and grid points to perform interpolate at current grid level, k, using surpluses, zk.
 
 			# Formulas based on Clenshaw-Curtis piecewise multi-linear basis functions of the kind:
 			# wght2_j = 1-(mi-1)*norm(x-x_j), if norm(x-x_j)> 1/(mi-1), else wght2_j = 0.0
-			if type == 'cc' or type == 'CC':
-				for i in range(0,num2):			# Number of points to interpolate
-					for j in range(0,num4):		# Number of grid nodes at current level
-						wght2[j] = 1.0			# Iinitialize total linear basis integration weights
-						for l in range(0,d): 	# Number of dimensions for the interpolation
+			if self.type == 'cc' or self.type == 'CC':
+				for i in range(0,num2):					# Number of points to interpolate
+					for j in range(0,num4):				# Number of grid nodes at current level
+						wght2[j] = 1.0					# Iinitialize total linear basis integration weights
+						for l in range(0,d): 			# Number of dimensions for the interpolation
 							# Determine 1D linear basis functions for each index i
 							if mi[indx[j,l]] == 1:
 								wght[j,l] = 1.0	# Leave weight == 1.0 if mi = 1
@@ -179,33 +171,33 @@ class sparseInterp():
 
 			# Formulas based on Barycentric Chebyshev polynomial basis functions of the kind:
 			# wght2_j = SUM_x_m[(x - x_m)/(x_j - x_m)], for all x_m != x_j
-			elif type == 'ch' or type == 'CH':
-				for i in range(0,num2):				# Number of points to interpolate
-					for j in range(0,num4):			# Number of grid nodes at current level
-						wght2[j] = 1.0				# Initialize total Chebyshev integration weights (i.e., w(x))
-						for l in range(0,d):		# Number of dimensions for the interpolation
-							polyw[j,l] = 1.0		# Iinitialize d-dim polynomial (i.e., (x - x_m)/(x_m - x_j))
-							if mi[indx[j,l]] != 1:	# Leave weight == 1.0 if mi = 1
+			elif self.type == 'ch' or self.type == 'CH':
+				for i in range(0,num2):					# Number of points to interpolate
+					for j in range(0,num4):				# Number of grid nodes at current level
+						wght2[j] = 1.0					# Initialize total Chebyshev integration weights (i.e., w(x))
+						for l in range(0,d):			# Number of dimensions for the interpolation
+							polyw[j,l] = 1.0			# Iinitialize d-dim polynomial (i.e., (x - x_m)/(x_m - x_j))
+							if mi[indx[j,l]] != 1:		# Leave weight == 1.0 if mi = 1
 								for m in range(0,mi[indx[j,l]]):		#m=1:mi(indx(j,l)):   # Else compute weight products over number of nodes for a given mi
 									xtmp = (1.+(-npy.cos((npy.pi*(m))/(mi[indx[j,l]]-1))))/2.    # Compute 1D node position on-the-fly
 									# Transform xtmp based on interval
 									range1 = npy.abs(npy.min(intvl[:,l])-npy.max(intvl[:,l]) )
 									xtmp = xtmp*range1 + npy.min(intvl[:,l])
 									if npy.abs(grdin[j,l] - xtmp) > 1.0e-03:	# Polynomial not defined if xtmp==grdin(j,l)
-										polyw[j,l] = polyw[j,l]*( (grdout[i,l]-xtmp)/(grdin[j,l]-xtmp) )   # Perform 1D polynomial products
+										polyw[j,l] *= (grdout[i,l]-xtmp)/(grdin[j,l]-xtmp)	# Perform 1D polynomial products
 							wght2[j] *= polyw[j,l]         # Perform the dimensional products for the polynomials
 						ipmj[i] += wght2[j]*zk[j]			# Sum over the number of total node points (j=num4) for all dimensions
 					ip2[i] = ipmj[i]                               # Now re-assign the interpolated value to new variable (redundant)
 
 			else:
-				print 'error: type must be "cc" or "ch"'
-				exit(1)
+				raise Exception('error: type must be "cc" or "ch"')
 
 			wk[k] = zk                       	   # Assign current surpluses to wk for back storage and output
 			werr[k] = npy.max(npy.abs(wk[k]))      # Compute absolute error of current grid level
 			meanerr[k] = npy.mean(npy.abs(wk[k]))  # Compute mean error of current grid level
 
 		return ip2,meanerr,werr
+
 
 if __name__ == "__main__":
 

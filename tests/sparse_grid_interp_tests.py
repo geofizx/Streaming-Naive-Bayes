@@ -2,10 +2,7 @@
 # encoding: utf-8
 
 """
-Some unit tests and usage examples for Smolyak Sparse Grid Interpolation library
-
-@author Michael Tompkins
-@copyright 2016__. All rights reserved.
+Some unit tests and usage examples for Smolyak Sparse Grid Interpolation
 
 @Usage Examples and Tests
 
@@ -13,6 +10,9 @@ Some unit tests and usage examples for Smolyak Sparse Grid Interpolation library
 2D Clenshaw-Curtis piece-wise linear basis sparse grid interpolation of 2D test function in fun_nd
 
 Generate plots for some outputs
+
+@author Michael Tompkins
+@copyright 2016
 """
 
 from mpl_toolkits.mplot3d import Axes3D

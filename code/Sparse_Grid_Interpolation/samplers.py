@@ -1,11 +1,12 @@
 #!/usr/bin/env python2.7
 # encoding: utf-8
-"""
-A general utility class for sampling points in d-dimensions based on
-sparse grid Clenshaw-Curtis or Chebyshev Polynomial Roots, Poisson Disk, or Uniform Random Draws
 
-Created by Michael Tompkins in 2012.
-Copyright (c) 2014 All rights reserved.
+"""
+A general utility class for sampling points in d-dimensions based on Smolyak's sparse grid algorithm using
+Clenshaw-Curtis or Chebyshev Polynomial Roots. Also contains utility methods for Poisson Disk, or Uniform Random Draws
+
+@author Michael Tompkins
+@copyright 2016
 """
 
 import numpy as npy

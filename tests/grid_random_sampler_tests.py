@@ -4,9 +4,6 @@
 """
 Some unit tests and usage examples for random and sparse grid sampler class
 
-@author Michael Tompkins
-@copyright 2016__. All rights reserved.
-
 @Usage Examples and Tests
 
 2D Chebyshev sparse grid nodes
@@ -15,6 +12,9 @@ Some unit tests and usage examples for random and sparse grid sampler class
 2D Uniform Random samples
 
 Generate plots for some outputs
+
+@author Michael Tompkins
+@copyright 2016
 """
 
 import matplotlib.pyplot as pl
