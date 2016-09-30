@@ -1,6 +1,6 @@
 #Signal Processing Library
 
-Time-Series signal processing class which accomodates any number of time series contained under subkeys of the input
+Time-Series signal processing class which accomodates any number of time series contained under subkeys of an input
 dictionary. Time series do not have to be the same length or sampled at the same frequencies.
 
 ####Implemented Methods####

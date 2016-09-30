@@ -11,20 +11,122 @@ Rough Clustering Approaches"
 """
 
 #Externals
+import json
+import itertools
+import operator
+from collections import Counter
+import numpy as npy
+import clustering
+import matplotlib.pyplot as plt
+import featureSelection
 
 #Internals
 
+class roughCluster():
+
+	def __init__(self,input_data,max_d=None,max_clusters=None):
+
+		self.data = input_data
+		self.debug = True
+		self.small = 1.0e-10
+
+		if max_d is None:
+			self.maxD = 18	# Maximum entity distance for stopping further clustering, if maxD == number of instances, all identities are in all clusters
+		else:
+			self.maxD = max_d
+		if max_clusters is None:
+			self.max_clusters = [2,3,5,10]	# Used for rejection of clusters when maximizing the sum of lower approximations for all clusters
+		else:
+			self.max_clusters = max_clusters
+
+	def enumerateClusters(self):
+
+		# Compute distance matrix for all pairs
+		data_length = len(self.data[header[0]])
+		print "Data Length",data_length
+		data["distance"] = {}
+		for k in range(0,data_length):
+			data["distance"][str(k)] = {str(j) : sum([abs(self.data[val][k]-self.data[val][j]) for val in header])
+										for j in range(0,data_length)}
+
+		# Form lower triangular form of all pairs (p,q) where p != q	# No repeats
+	all_keys = {key : None for key in data["distance"].keys()}		# Static all entity keys
+	curr_keys = {key : None for key in data["distance"].keys()}		# Place holder entity keys
+	total_ents = len(curr_keys.keys())
+	print "Total Entities", total_ents
+	distance = {}
+	for key1 in data["distance"]:	# Full pair p,q lower triangular integer distance matrix enumeration
+		curr_keys.pop(key1)
+		distance[key1] = {key2 : int(data["distance"][key1][key2]) for key2 in curr_keys.keys()}
+
+	# Loop over min distance D from 0:maxD and find candidate pairs with distance < i
+	out_stat1 = {"cluster_num":[],"SumLowerA":[],"SumUpperA":[],"PercentCovered":[]}
+	out_stat2 = [{"cluster_num":[],"SumLowerA":[],"SumUpperA":[],"PercentCovered":[]} for p in range(len(max_clusters))]
+	for i in range(0,maxD):
+		ct2 = 0
+		cluster_count = 0
+		cluster_list = []
+		clusters = {}
+		first_cluster = {}
+		# Find entity pairs that have distance < i
+		#print distance[key1][]
+		candidates = {key1:[key2 for key2 in distance[key1].keys() if distance[key1][key2] <= i ] for key1 in all_keys}
+		print "# Candidate Pairs",i,len(list(itertools.chain(*[candidates[g] for g in candidates.keys()]))) #,max(candidates),min(candidates),npy.mean(candidates)
+		# Determine for all pairs if pairs are to be assigned to new clusters or previous clusters
+		#superset[key1] = {key2 : list(itertools.chain(*[self.T_attrs[g] for g in obj1[key2]]))
+		#						  for key2 in Tcurr if mem_over[key1][key2]>1}
+		for k,keyname in enumerate(candidates.keys()):
+			#print i,k,keyname,cluster_count,len(cluster_list)
+			for l,keyname2 in enumerate(candidates[keyname]):
+				#cluster_list = {key : clusters[i][key] for key in clusters[i]}
+				#cluster_list = list(itertools.chain(*[clusters[g] for g in clusters.keys()]))
+				if (keyname in cluster_list) and (keyname2 in cluster_list):	# Assign each entity to other's first cluster
+					#if first_cluster[keyname] != first_cluster[keyname2]:
+					if keyname not in clusters[first_cluster[keyname2]]:
+						clusters[first_cluster[keyname2]].append(keyname)
+					if keyname2 not in clusters[first_cluster[keyname]]:
+						clusters[first_cluster[keyname]].append(keyname2)
+						ct2 += 1
+						#print "intersecting clusters",ct2,first_cluster[keyname],first_cluster[keyname2],cluster_count
+				elif (keyname in cluster_list) and (keyname2 not in cluster_list):	# Assign entity 2 to entity 1's first cluster
+					clusters[first_cluster[keyname]].append(keyname2)
+					cluster_list.append(keyname2)
+					first_cluster[keyname2] = first_cluster[keyname]
+				elif keyname2 in cluster_list and (keyname not in cluster_list):	# Assign entity 1 to entity 2's first cluster
+					clusters[first_cluster[keyname2]].append(keyname)
+					cluster_list.append(keyname)
+					first_cluster[keyname] = first_cluster[keyname2]
+				else:														# Assign both entities to new cluster list
+					clusters[cluster_count] = [keyname,keyname2]
+					cluster_list.append(keyname)
+					cluster_list.append(keyname2)
+					first_cluster[keyname] = cluster_count					# Keep track of current cluster for each key
+					first_cluster[keyname2] = cluster_count					# Keep track of current cluster for each key
+					cluster_count += 1
+
+		# Determine upper and lower approximations of clusters for total clusters and pruned clusters
+		print "Number of Clusters for maxD: ",i," : ",cluster_count
+		sum_all = len(list(itertools.chain(*[clusters[g] for g in clusters.keys() if clusters])))
+		sum_lower = 0
+		sum_upper = 0
+		intersections = {}
+		int_tmp = {}
+		if len(clusters.keys()) > 1:
+			for key1 in clusters:
+				intersections[key1] = {key2 : list(set(clusters[key1]).intersection(set(clusters[key2])))
+								 for key2 in clusters if key2 != key1}
+				#print list(itertools.chain(*[intersections[key1][g] for g in intersections[key1]]))
+				int_tmp[key1] = len(clusters[key1]) - len(Counter(list(itertools.chain(*[intersections[key1][g] for g in intersections[key1]]))))
+				#print intersections[key1]
+				#int_tmp = npy.sum([intersections[key1][g] for g in intersections[key1]])
+				#print "total, intersections, lower",key1,len(clusters[key1]),int_tmp
+				sum_lower += int_tmp[key1] #intersections[key1])
+				sum_upper += len(clusters[key1])
+		else:
+			sum_lower = sum_all
+			sum_upper = sum_all
 
 if __name__ == "__main__":
-
-	import json
-	import itertools
-	import operator
-	from collections import Counter
-	import numpy as npy
-	import clustering
-	import matplotlib.pyplot as plt
-	import featureSelection
 
 	file2 = open("german_all.json","r")
 	data = json.load(file2)
@@ -54,15 +156,13 @@ if __name__ == "__main__":
 			#print key,encoding
 			for n in range(len(data["payload"][key])):
 				data2[key].append(encoding[data["payload"][key][n]])
-		#print key,data2[key][0:5]
-
 
 	# Compute distance matrix for all pairs
-	data_length = len(data2[header[0]])
-	print "Data Length",data_length
-	data["distance"] = {}
-	for k in range(0,data_length):
-		data["distance"][str(k)] = {str(j) : sum([abs(data2[val][k]-data2[val][j]) for val in header]) for j in range(0,data_length)}
+	#data_length = len(data2[header[0]])
+	#print "Data Length",data_length
+	#data["distance"] = {}
+	#for k in range(0,data_length):
+	#	data["distance"][str(k)] = {str(j) : sum([abs(data2[val][k]-data2[val][j]) for val in header]) for j in range(0,data_length)}
 
 	unit = False
 
