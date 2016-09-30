@@ -3,14 +3,26 @@ This library is an implementation of Smolyak’s Sparse Grid Algorithm for solvi
 in d-dim spaces with far fewer function evaluations than needed with traditional tensor production
 integration/interpolation.
 
-This library also implements several general sampling algorithms (Poisson Disk, Uniform Random) as well as two
-sparse-grid rules:
+This library currently implements Smolyak's algorithm for two polynomial bases:
 
-Clenshaw-Curtis – Piecewise Linear Basis Functions (sup. [0,1])
+    *Clenshaw-Curtis – Piecewise Linear Basis Functions (sup. [0,1])
 
-Chebyshev Polynomials – Cos Basis Functions (sup. [0,1])
+    *Chebyshev Polynomials – Cos Basis Functions (sup. [0,1])
 
-Fejer Polynomials - Coming Soon (open support (-1,1))
+    *Fejer Polynomials - Coming Soon - (open sup. (-1,1))
+
+I implement three sparse sampling integration rules based on Stroud's Theory (Stroud, 1957) that are useful when solving
+numerical integration problems in n-dimensional Euclidean spaces with equally and explicitly-weighted points.
+
+    *Stroud - Rules for n-dimensional Gaussian of degree two or three
+
+    *Xiu - Rules for n-dimensional non-symmetric Euclidean spaces of degree two or three
+
+I also implement several general sampling algorithms for utility :
+
+    *Poisson Disk Random
+
+    *Uniform Random
 
 ####Usage####
 
