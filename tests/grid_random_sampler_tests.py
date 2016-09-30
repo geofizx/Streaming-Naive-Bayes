@@ -22,9 +22,10 @@ from Sparse_Grid_Interpolation import ndSampler
 
 # Determine which tests will be run with bools
 Poisson = False
-Chebyshev = True
+Chebyshev = False
 Clenshaw = False
 Uniform = False
+Stroud = True
 
 if Poisson is True:
 	num = 400		# Number of samples to draw
@@ -39,7 +40,7 @@ if Poisson is True:
 	pl.plot(points1[:,0],points1[:,1],'ro',label=label1)
 	pl.hold(True)
 	pl.plot(points2[:,0],points2[:,1],'bo',label=label2)
-	pl.title("Poisson Disk Random Samples")
+	pl.title("Poisson Disk Random Samples in 2-D")
 	pl.legend()
 	pl.show()
 
@@ -55,7 +56,7 @@ if Chebyshev is True:
 	pl.plot(points1[:,0],points1[:,1],'ro',label=label1)
 	pl.hold(True)
 	pl.plot(points2[:,0],points2[:,1],'bo',label=label2)
-	pl.title("Chebyshev Sparse-Grid Samples")
+	pl.title("Chebyshev Sparse-Grid Samples in 2-D")
 	pl.legend()
 	pl.show()
 
@@ -71,7 +72,20 @@ if Clenshaw is True:
 	pl.plot(points1[:,0],points1[:,1],'ro',label=label1)
 	pl.hold(True)
 	pl.plot(points2[:,0],points2[:,1],'bo',label=label2)
-	pl.title("Clenshaw-Curtis Sparse-Grid Samples")
+	pl.title("Clenshaw-Curtis Sparse-Grid Samples in 2-D")
+	pl.legend()
+	pl.show()
+
+if Stroud is True:
+	dim1 = 2		# Dimensionality of space
+	sample = ndSampler(3,dim1)
+	points1 = sample.stroud(3)		# Stroud rule degree-3 points
+	label1 = "Stroud Degree:"+str(3)+" Points"
+	pl.plot(points1[:,0],points1[:,1],'bo',label=label1)
+	points2 = sample.stroud(5)		# Xiu rule degree-3 points
+	label2 = "Xiu Degree:"+str(3)+" Points"
+	pl.plot(points2[:,0],points2[:,1],'ro',label=label2)
+	pl.title("Stroud/Xiu Degree-3 Samples in 2-D")
 	pl.legend()
 	pl.show()
 
@@ -88,6 +102,6 @@ if Uniform is True:
 	pl.plot(points1[:,0],points1[:,1],'ro',label=label1)
 	pl.hold(True)
 	pl.plot(points2[:,0],points2[:,1],'bo',label=label2)
-	pl.title("Uniform Random Samples")
+	pl.title("Uniform Random Samples in 2-D")
 	pl.legend()
 	pl.show()
