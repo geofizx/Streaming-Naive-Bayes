@@ -5,24 +5,24 @@ integration/interpolation.
 
 This library currently implements Smolyak's algorithm for two polynomial bases:
 
-    *Clenshaw-Curtis – Piecewise Linear Basis Functions (sup. [0,1])
+    Clenshaw-Curtis – Piecewise Linear Basis Functions (sup. [0,1])
 
-    *Chebyshev Polynomials – Cos Basis Functions (sup. [0,1])
+    Chebyshev Polynomials – Cos Basis Functions (sup. [0,1])
 
-    *Fejer Polynomials - Coming Soon - (open sup. (-1,1))
+    Fejer Polynomials - Coming Soon - (open sup. (-1,1))
 
 I implement three sparse sampling integration rules based on Stroud's Theory (Stroud, 1957) that are useful when solving
 numerical integration problems in n-dimensional Euclidean spaces with equally and explicitly-weighted points.
 
-    *Stroud - Rules for n-dimensional Gaussian of degree two or three
+    Stroud - Rules for n-dimensional Gaussian of degree two or three
 
-    *Xiu - Rules for n-dimensional non-symmetric Euclidean spaces of degree two or three
+    Xiu - Rules for n-dimensional non-symmetric Euclidean spaces of degree two or three
 
 I also implement several general sampling algorithms for utility :
 
-    *Poisson Disk Random
+    Poisson Disk Random - Samples drawn from uniform probability distribution with accept/reject rule for optimal point placement
 
-    *Uniform Random
+    Uniform Random - Samples drawn from uniform probability distribution
 
 ####Usage####
 
