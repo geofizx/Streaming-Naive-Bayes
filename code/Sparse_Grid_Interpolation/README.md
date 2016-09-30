@@ -11,8 +11,9 @@ This library currently implements Smolyak's algorithm for two polynomial bases:
 
     Fejer Polynomials - Coming Soon - (open sup. (-1,1))
 
-I implement three sparse sampling integration rules based on Stroud's Theory (Stroud, 1957) that are useful when solving
-numerical integration problems in n-dimensional Euclidean spaces with equally and explicitly-weighted points.
+I implement three sparse sampling integration rules based on Stroud's Theory (Stroud, 1957) and its extension by
+Xiu (Xio, 2007) that are useful when solving numerical integration problems in n-dimensional Euclidean spaces
+with equally and explicitly-weighted points.
 
     Stroud - Rules for n-dimensional Gaussian of degree two or three
 
@@ -72,8 +73,16 @@ Fishman, G., 1996, Monte Carlo: Concepts, Algorithms, and Applications, Springer
 Smolyak, S., 1963, Quadrature and interpolation formulas for tensor products of certain classes of functions,
 Soviet Math. Dokl., 4, 240-243.
 
+Stroud, A.H., 1957, Remarks on the disposition of points in numerical integration formulas, Math Tables & Other
+Aids in Computing, 257-261.
+
 Waldvogel, J., 2003, Fast construction of the Fejér and Clenshaw-Curtis quadrature rules, BIT Numerical Mathematics,
 43(1), 1-18.
 
 Xiu, D., 2007, Efficient collocational approach for parametric uncertainty analysis, 2(2), Commun. Comput. Phys.,
 293-309.
+
+Xiu, D., 2007, Numerical integration formulas of degree two, Applied Numerical Mathematics (2007),
+doi:10.1016/j.apnum.2007.09.004.
+
+
