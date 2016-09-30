@@ -12,7 +12,7 @@ This library currently implements Smolyak's algorithm for two polynomial bases:
     Fejer Polynomials - Coming Soon - (open sup. (-1,1))
 
 I implement three sparse sampling integration rules based on Stroud's Theory (Stroud, 1957) and its extension by
-Xiu (Xio, 2007) that are useful when solving numerical integration problems in n-dimensional Euclidean spaces
+Xiu (Xiu, 2007) that are useful when solving numerical integration problems in n-dimensional Euclidean spaces
 with equally and explicitly-weighted points.
 
     Stroud - Rules for n-dimensional Gaussian of degree two or three
@@ -27,8 +27,8 @@ I also implement several general sampling algorithms for utility :
 
 ####Usage####
 
-See /tests/sparse_grid_interp_tests.py for example usage for sparse-grid interpolation
-See /tests/grid_random_sampler_tests.py for example usage for sparse-grid, Poisson, and Uniform random samplers
+    /tests/sparse_grid_interp_tests.py - example usage for sparse-grid interpolation
+    /tests/grid_random_sampler_tests.py - example usage for sparse-grid, Poisson, and Uniform random samplers
 
 ####User defined function####
 
