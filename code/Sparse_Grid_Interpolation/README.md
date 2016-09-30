@@ -11,7 +11,7 @@ This library currently implements Smolyak's algorithm for two polynomial bases:
 
     Fejer Polynomials - Coming Soon - (open sup. (-1,1))
 
-I implement three sparse sampling integration rules based on Stroud's Theory (Stroud, 1957) and its extension by
+I implement two sparse sampling integration rules based on Stroud's Theory (Stroud, 1957) and its extension by
 Xiu (Xiu, 2007) that are useful when solving numerical integration problems in n-dimensional Euclidean spaces
 with equally and explicitly-weighted points.
 
