@@ -236,7 +236,7 @@ class classifier:
 	def classLearn(self,train,response):
 
 		"""
-		Naive Bayesian Classifier Initial Learner Method - First call to classifier class
+		Naive Bayesian Classifier Initial Training Method - First call to classifier class
 		Train and build frequency table from initial training feature set stream
 		"""
 
@@ -256,11 +256,10 @@ class classifier:
 			# Attribute Count for Classifier
 			numatt = len(train)  # Number of attributes
 
-			# Determine number of unique classes from response dictionary
+			# Determine number of unique classes from target dictionary
 			keyval = response.keys()
 			if len(keyval) > 1:
-				raise self.exceptionClass(
-					"422.2")  # Unprocessable Entity/Request in Learner Method - more than 1 key for response data
+				raise Exception ("more than 1 key for target data")
 
 			classlist = []
 			for row in response[keyval[0]]:
@@ -527,7 +526,7 @@ class classifier:
 	def classAcc(self,class_dict,responsedata,tagname="all",metadata=None):
 
 		"""
-		Determine precision, recall, and F-1 score and composite accuracy for each class predicted
+		Determine precision, recall, F-1 score and composite accuracy for each class predicted
 		"""
 
 		#Determine keyname
@@ -584,8 +583,7 @@ class classifier:
 
 					# Compute F-1 Score for each class
 					acc_dict['f1_scores'][m] = round( 2 * ((precision * acc_dict['recall'][m]) /
-																		(precision + acc_dict['recall'][
-																			m]) ) ,2) # F-1 Score given precision and recall
+														   (precision + acc_dict['recall'][m]) ) ,2) # F-1 Score
 
 					acc_dict['precision'][m] = round(precision,2)
 					acc_dict['class_names'][m] = classname
