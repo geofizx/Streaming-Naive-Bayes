@@ -2,7 +2,7 @@
 # encoding: utf-8
 
 """
-Some unit tests and usage examples for streaming Naive Bayes classifier
+Some example training/prediction/error and usage examples for streaming Naive Bayes classifier
 
 @author Michael Tompkins
 @copyright 2016

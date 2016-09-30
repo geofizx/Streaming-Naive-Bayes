@@ -13,6 +13,7 @@
 	2. classPredict() - Predictions based on Naive Bayes Classifier
 	3. classUpdate() - Update method for incremental (streaming) training
 	4. classAcc() - Classification error statistics method
+	4. validateFeatures() - Feature data type validation and mapping for learner
 
 	Includes dynamic binning to account for updated feature dynamic ranges over data stream
 
@@ -25,7 +26,6 @@
 
 #Externals
 import numpy as npy
-import time
 from collections import Counter
 import copy
 
@@ -70,6 +70,159 @@ class classifier:
 
 		return
 
+	def classLearn(self,train,response):
+
+		"""
+		Naive Bayesian Classifier Initial Training Method - First call to classifier class
+		Train and build frequency table from initial training feature set stream
+
+		:arg train - dictionary containing <feature name> : list(value) pairs for each feature vector
+		:arg response - dictionary containing <target class name> : list(class value) pairs for target class vector
+		"""
+
+		try:
+
+			# Validate feature vector data types on initial learning and generate self.listmap dictionary used here
+			self.validateFeatures(train)
+
+			# Row Count and Sanity Check for Bayes Classifier
+			rowtmp = []
+			for keyname in train:
+				rowtmp.append(len(train[keyname]))  # Row count of each attribute for the training set
+
+			rowcount = rowtmp[0]  # If all keys have equal rows, then assign row count to 1st index
+			numatt = len(train)  # Number of attributes
+
+			# Validate there is only a single key in classes dictionary
+			keyval = response.keys()
+			if len(keyval) > 1:
+				raise Exception ("more than 1 key for target data")
+
+			# Enumerate the classes present in data
+			classlist = response[keyval[0]]
+			count_up = Counter(classlist)
+			classes = count_up.keys()
+			numclass = len(classes)
+			class_ct = [count_up[m] for m in classes]
+
+			if self.debug:
+				print class_ct
+				print 'rowcount, numatt, numclass'
+				print rowcount,numatt,numclass
+				print classes
+				print numclass
+
+			# Determine number of unique strings in each feature vector of data type str
+			strings = {}
+			str_range = {}
+			for key1 in train:
+				if isinstance("str",self.listmap[key1]):
+					strings[key1] = Counter(train[key1]).keys()
+					str_range[key1] = len(strings[key1])
+
+			# Set up frequency tables for learning
+			int_range = {}
+			bin_inc = {}
+			float_range = {}
+			float_inc = {}
+			int_bins = {}
+			float_bins = {}
+			int_min = {}
+			int_max = {}
+			float_min = {}
+			float_max = {}
+			bin_min = {}
+
+			freqdict = []
+			indexes = []
+			for m in range(0,numclass):
+				indexes.append([])
+				classname = classes[m]
+				freqdict.append({})
+				indexes[m] = [i for i,x in enumerate(classlist) if x == classname]
+
+			# Build frequency table one feature vector at a time and handle missing values
+			for key in train:
+
+				if self.listmap[key] is int:
+
+					tmplist = [i for i in train[key][:] if isinstance(i,int)]
+					bin_min[key] = len(npy.unique(tmplist))
+					int_range[key] = npy.max(tmplist) - npy.min(tmplist)
+					int_min[key] = npy.min(tmplist)
+					int_max[key] = npy.max(tmplist)
+					tmpl = int_range[key] / 6
+					bin_num = npy.max([tmpl,1])
+					#bin_tmp = int_range[key] / bin_num + 1
+					bin_inc[key] = [bin_num + 1 for i in range(0,6)]
+					int_bins[key] = [int_min[key]]
+
+					for g in range(0,len(bin_inc[key])):
+						int_bins[key].append(int_bins[key][g] + bin_inc[key][g])
+
+					for j,classname in enumerate(classes):  # Enumerate over classes
+						T = [train[key][i] for i in indexes[j] if isinstance(train[key][i],int)]
+						if j == 0:
+							bins = int_bins[key]
+							[values,bins] = npy.histogram(T,bins,(int_min[key],int_max[key]))
+						else:
+							[values,bins] = npy.histogram(T,bins,(int_min[key],int_max[key]))
+
+						freqdict[j][key] = list(values)
+
+				elif self.listmap[key] is float:
+
+					tmplist = [i for i in train[key][:] if not npy.isnan(i)] #isinstance(i,float)]
+					if len(tmplist) == 0:
+						float_range[key] = 0.0
+						float_min[key] = 0.0
+						float_max[key] = 0.0
+						float_bins[key] = [0.0]
+						float_inc[key] = [0.0]
+
+					else:
+						float_range[key] = npy.ceil(npy.max(tmplist) - npy.min(tmplist))
+						float_min[key] = npy.min(tmplist)
+						float_max[key] = npy.max(tmplist)
+						[values,binsf] = npy.histogram(tmplist,6)
+						float_bins[key] = list(binsf)
+						float_inc[key] = []
+						for g in range(0,len(float_bins[key]) - 1):
+							float_inc[key].append(float_bins[key][g + 1] - float_bins[key][g])
+
+					for j,classname in enumerate(classes):  # Enumerate over classes
+						T = [train[key][i] for i in indexes[j] if isinstance(train[key][i],float)]
+						if j == 0:
+							bins = float_bins[key]
+							[values,bins] = npy.histogram(T,bins,(float_min[key],float_max[key]))
+						else:
+							[values,bins] = npy.histogram(T,bins,(float_min[key],float_max[key]))
+
+						freqdict[j][key] = list(values)
+
+				elif isinstance("str",self.listmap[key]):
+
+					for j,classname in enumerate(classes):  # Enumerate over classes
+						freqdict[j][key] = [0 for n in range(0,str_range[key])]
+						T = [train[key][i] for i in indexes[j]]
+						str_cntr = Counter(T)
+						for k,stringkey in enumerate(strings[key]):
+							freqdict[j][key][k] = str_cntr[stringkey]
+
+				else:
+					raise Exception("Unprocessable Feature Type (int,float,string supported)")
+
+		except Exception as e:
+			raise Exception(e)
+
+		paramdict = {'int_range': int_range,'bin_inc': bin_inc,'int_bins': int_bins,'int_min': int_min,
+					 'float_range': float_range,'float_inc': float_inc,
+					 'float_bins': float_bins,'float_min': float_min,
+					 'numatt': numatt,'numclass': numclass,'classes': classes,'class_ct': class_ct,
+					 'strings': strings, 'int_max': int_max, 'float_max': float_max}
+
+		return freqdict,paramdict
+
 	def classUpdate(self,freqs,params,update,response):
 
 		"""
@@ -82,8 +235,6 @@ class classifier:
 		:arg update: dictionary containing the current feature space stream as <feature_name> : <feature_value_list>
 		:arg response: dictionary of current target classes for current portion of feature space stream
 		"""
-
-		t1 = time.time()
 
 		int_range = params['int_range']
 		bin_inc = params['bin_inc']
@@ -251,175 +402,10 @@ class classifier:
 										if update[key][i] == name:
 											freqs[j][key][k] += 1
 
-			params["version"] = str(time.time())
-
-			t2 = time.time()
-			if self.debug is True:
-				print "classUpdate Took: "+str(t2-t1)
-
 		except Exception as e:
 			raise Exception(e)
 
 		return freqs,params
-
-	def classLearn(self,train,response):
-
-		"""
-		Naive Bayesian Classifier Initial Training Method - First call to classifier class
-		Train and build frequency table from initial training feature set stream
-
-		:arg train - dictionary containing <feature name> : list(value) pairs for each feature vector
-		:arg response - dictionary containing <target class name> : list(class value) pairs for target class vector
-		"""
-
-		try:
-			t1 = time.time()
-
-			# Validate feature vector data types on initial learning and generate self.listmap dictionary used here
-			self.validateFeatures(train)
-
-			# Row Count and Sanity Check for Bayes Classifier
-			rowtmp = []
-			for keyname in train:
-				rowtmp.append(len(train[keyname]))  # Row count of each attribute for the training set
-
-			rowcount = rowtmp[0]  # If all keys have equal rows, then assign row count to 1st index
-			numatt = len(train)  # Number of attributes
-
-			# Validate there is only a single key in classes dictionary
-			keyval = response.keys()
-			if len(keyval) > 1:
-				raise Exception ("more than 1 key for target data")
-
-			# Enumerate the classes present in data
-			classlist = response[keyval[0]]
-			count_up = Counter(classlist)
-			classes = count_up.keys()
-			numclass = len(classes)
-			class_ct = [count_up[m] for m in classes]
-
-			if self.debug:
-				print class_ct
-				print 'rowcount, numatt, numclass'
-				print rowcount,numatt,numclass
-				print classes
-				print numclass
-
-			# Determine number of unique strings in each feature vector of data type str
-			strings = {}
-			str_range = {}
-			for key1 in train:
-				if isinstance("str",self.listmap[key1]):
-					strings[key1] = Counter(train[key1]).keys()
-					str_range[key1] = len(strings[key1])
-
-			# Set up frequency tables for learning
-			int_range = {}
-			bin_inc = {}
-			float_range = {}
-			float_inc = {}
-			int_bins = {}
-			float_bins = {}
-			int_min = {}
-			int_max = {}
-			float_min = {}
-			float_max = {}
-			bin_min = {}
-
-			freqdict = []
-			indexes = []
-			for m in range(0,numclass):
-				indexes.append([])
-				classname = classes[m]
-				freqdict.append({})
-				indexes[m] = [i for i,x in enumerate(classlist) if x == classname]
-
-			# Build frequency table one feature vector at a time and handle missing values
-			for key in train:
-
-				if self.listmap[key] is int:
-
-					tmplist = [i for i in train[key][:] if isinstance(i,int)]
-					bin_min[key] = len(npy.unique(tmplist))
-					int_range[key] = npy.max(tmplist) - npy.min(tmplist)
-					int_min[key] = npy.min(tmplist)
-					int_max[key] = npy.max(tmplist)
-					tmpl = int_range[key] / 6
-					bin_num = npy.max([tmpl,1])
-					#bin_tmp = int_range[key] / bin_num + 1
-					bin_inc[key] = [bin_num + 1 for i in range(0,6)]
-					int_bins[key] = [int_min[key]]
-
-					for g in range(0,len(bin_inc[key])):
-						int_bins[key].append(int_bins[key][g] + bin_inc[key][g])
-
-					for j,classname in enumerate(classes):  # Enumerate over classes
-						T = [train[key][i] for i in indexes[j] if isinstance(train[key][i],int)]
-						if j == 0:
-							bins = int_bins[key]
-							[values,bins] = npy.histogram(T,bins,(int_min[key],int_max[key]))
-						else:
-							[values,bins] = npy.histogram(T,bins,(int_min[key],int_max[key]))
-
-						freqdict[j][key] = list(values)
-
-				elif self.listmap[key] is float:
-
-					tmplist = [i for i in train[key][:] if not npy.isnan(i)] #isinstance(i,float)]
-					if len(tmplist) == 0:
-						float_range[key] = 0.0
-						float_min[key] = 0.0
-						float_max[key] = 0.0
-						float_bins[key] = [0.0]
-						float_inc[key] = [0.0]
-
-					else:
-						float_range[key] = npy.ceil(npy.max(tmplist) - npy.min(tmplist))
-						float_min[key] = npy.min(tmplist)
-						float_max[key] = npy.max(tmplist)
-						[values,binsf] = npy.histogram(tmplist,6)
-						float_bins[key] = list(binsf)
-						float_inc[key] = []
-						for g in range(0,len(float_bins[key]) - 1):
-							float_inc[key].append(float_bins[key][g + 1] - float_bins[key][g])
-
-					for j,classname in enumerate(classes):  # Enumerate over classes
-						T = [train[key][i] for i in indexes[j] if isinstance(train[key][i],float)]
-						if j == 0:
-							bins = float_bins[key]
-							[values,bins] = npy.histogram(T,bins,(float_min[key],float_max[key]))
-						else:
-							[values,bins] = npy.histogram(T,bins,(float_min[key],float_max[key]))
-
-						freqdict[j][key] = list(values)
-
-				elif isinstance("str",self.listmap[key]):
-
-					for j,classname in enumerate(classes):  # Enumerate over classes
-						freqdict[j][key] = [0 for n in range(0,str_range[key])]
-						T = [train[key][i] for i in indexes[j]]
-						str_cntr = Counter(T)
-						for k,stringkey in enumerate(strings[key]):
-							freqdict[j][key][k] = str_cntr[stringkey]
-
-				else:
-					raise Exception("Unprocessable Feature Type (int,float,string supported)")
-
-			t2 = time.time()
-
-			if self.debug:
-				print 'classLearn - Timing'+str(t2-t1)
-
-		except Exception as e:
-			raise Exception(e)
-
-		paramdict = {'int_range': int_range,'bin_inc': bin_inc,'int_bins': int_bins,'int_min': int_min,
-					 'float_range': float_range,'float_inc': float_inc,
-					 'float_bins': float_bins,'float_min': float_min,
-					 'numatt': numatt,'numclass': numclass,'classes': classes,'class_ct': class_ct,
-					 'strings': strings, 'int_max': int_max, 'float_max': float_max}
-
-		return freqdict,paramdict
 
 	def classPredict(self,freqs,params,test):
 
