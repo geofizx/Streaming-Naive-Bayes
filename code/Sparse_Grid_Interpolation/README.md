@@ -27,8 +27,8 @@ I also implement several general sampling algorithms for utility :
 
 ####Usage####
 
-    /tests/sparse_grid_interp_tests.py - example usage for sparse-grid interpolation
-    /tests/grid_random_sampler_tests.py - example usage for sparse-grid, Poisson, and Uniform random samplers
+    /tests/sparse_grid_interp_tests.py - example usage and tests for sparse-grid interpolation
+    /tests/grid_random_sampler_tests.py - example usage and tests for sparse-grid, Poisson, and Uniform random samplers
 
 ####User defined function####
 
