@@ -15,9 +15,9 @@ I implement three sparse sampling integration rules based on Stroud's Theory (St
 Xiu (Xiu, 2007) that are useful when solving numerical integration problems in n-dimensional Euclidean spaces
 with equally and explicitly-weighted points.
 
-    Stroud - Rules for n-dimensional Gaussian of degree two or three
+    Stroud - Rules for n-dimensional Euclidean spaces of degree two or three (uniform distributions)
 
-    Xiu - Rules for n-dimensional non-symmetric Euclidean spaces of degree two or three
+    Xiu - Rules for n-dimensional non-symmetric Euclidean spaces of degree two or three (Gaussians)
 
 I also implement several general sampling algorithms for utility :
 
