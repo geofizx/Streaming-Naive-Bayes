@@ -35,6 +35,9 @@ I also implement several general sampling algorithms for utility :
     fun_nd.py provides example code that evaluates functions in 2D for a given test function. The user must specify a
     new funtion fun_nd.py that follows this same format and evaluates n-dim target functions desired for interpolation.
 
+####Dependencies####
+    itertools
+
 ####Smolyak’s Sparse Grid Algorithm####
 
     One approach to solving numerical integration (or polynomial interpolation) is to use 1D Gauss quadrature rules
