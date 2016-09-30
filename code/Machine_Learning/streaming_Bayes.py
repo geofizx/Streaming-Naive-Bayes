@@ -9,18 +9,15 @@
 	values from feature set.
 
 	Methods Implemented :
-	1. classLearn() - Training using continuous (float), categorical (int or string), and mixed data types
-	2. classPredict() - Prediction based on Naive Bayes Classifier
-	3. classUpdate() - Update method for incremental training
-	4. classAcc() - Accuracy computation method
+	1. classLearn() - Training using continuous (float), categorical (int or string), and mixed feature data types
+	2. classPredict() - Predictions based on Naive Bayes Classifier
+	3. classUpdate() - Update method for incremental (streaming) training
+	4. classAcc() - Classification error statistics method
 
 	Includes dynamic binning to account for updated feature dynamic ranges over data stream
 
 @notes
-	re-binning implemented here is quite crude
-
-	need to optimize how I bin for both int and float attributes given that for streaming I need to have same bins
-	for all subsequent calls to predicter---thus, initial bining must be optimal for all future learning / training
+	re-binning implemented here is quite crude and needs to be improved
 
 @author Michael Tompkins
 @copyright 2016
@@ -34,32 +31,60 @@ import copy
 
 class classifier:
 
+	"""
+	Naive Bayes Classifier
+	"""
 
-	def __init__(self, listmap):
+	def __init__(self):
 
-		"""
-		Class for Learning, Predicting, Updating, and Accuracy Check of Naive Bayes Classifier
-		"""
-
-		self.listmap = listmap['data_set_map']
-		self.debug = True
+		self.listmap = None
+		self.debug = False
 		self.small = 1.0e-10
 
+	def validateFeatures(self,feature_set):
+
+		"""
+		Validation method for data types in feature space
+
+		:param feature_set : dictionary of <feature_name> : feature vector list pairs
+		:return: listmap : dictionary containing <feature_name> : <data type> pairs for all features in feature space
+		"""
+
+		self.listmap = {}
+
+		for keyname in feature_set:
+
+			if any(isinstance(n,float) for n in feature_set[keyname][:]):
+				fvalue = float
+			elif any(isinstance(n,int) for n in feature_set[keyname][:]):
+				fvalue = int
+			elif any(isinstance(n, (str, unicode)) for n in feature_set[keyname][:]):
+				fvalue = str
+			else:
+				raise Exception("Input features must be type int, float, or string")
+
+			self.listmap[keyname] = fvalue
+
+		if self.debug is True:
+			print self.listmap
+
+		return
 
 	def classUpdate(self,freqs,params,update,response):
 
 		"""
 		Naive Bayesian Classifier Update Method
-		Incrementally augmnent priors and frequency tables (and potentialy binning) with
-		attributes of [update] set from previous training
+		Incrementally augmnent priors and frequency tables (and potentialy bins) with attributes of [update]
+		set from previous training
 
 		:arg freqs: dictionary of frequency tables for training including priors/likelihood estimations
-		:arg params: dictionary of states for previous feature space stream
-		:arg update:
+		:arg params: dictionary of states for previous feature space streams
+		:arg update: dictionary containing the current feature space stream as <feature_name> : <feature_value_list>
 		:arg response: dictionary of current target classes for current portion of feature space stream
 		"""
 
 		t1 = time.time()
+
 		int_range = params['int_range']
 		bin_inc = params['bin_inc']
 		int_bins = params['int_bins']
@@ -70,11 +95,11 @@ class classifier:
 		float_bins = params['float_bins']
 		float_min = params['float_min']
 		float_max = params['float_max']
-		numclass = params['numclass'] # Check
-		classes = params['classes'] # Check
-		strings = params['strings'] # Check
+		numclass = params['numclass']
+		classes = params['classes']
+		strings = params['strings']
 
-		# Check feature label integrity between train and predict
+		# Check feature label integrity between calls to this method
 		if len(update.keys()) == len(freqs[0].keys()):
 			for key1 in update:
 				if key1 not in freqs[0].keys():
@@ -108,18 +133,21 @@ class classifier:
 					numclass += 1					# Local scope update
 					params['numclass'] += 1			# Output update
 					params['class_ct'].append(0)
-					#params['class_ct'].append(Counter(classlstnew)[name])
 					indxk.append([i for i in range(0,length) if response[keyval[0]][i] == name])
 					freqs.append({k:[freqs[0][k][q]*0 for q in range(0,len(freqs[0][k]))] for k in update.keys()})
 
-			for j,classname in enumerate(classes): # Loop over each known class
+			for j,classname in enumerate(classes): 	# Loop over each known class
 				params['class_ct'][j] = params['class_ct'][j] + (Counter(classlstnew)[classname])
+
 				for i in indxk[j]:  					# loop over each row in [update] for class j
+
 					for key in update:  				# Loop over number of attributes per row
+
 						if isinstance(update[key][i],int):	# If value is INT and not None
+
 							if (update[key][i] > bin_inc[key][-1]+int_bins[key][-1]) or \
 									(update[key][i] < int_bins[key][0]):
-								if update[key][i] > bin_inc[key][-1]+int_bins[key][-1]:				# Add bin to left
+								if update[key][i] > bin_inc[key][-1]+int_bins[key][-1]:		# Add bin to left
 									newinc = (update[key][i]-int_max[key])
 									newbin = update[key][i]
 									bin_inc[key].append(newinc)
@@ -133,7 +161,7 @@ class classifier:
 									for p,nam in enumerate(classes):
 										freqs[p][key].append(0)
 									freqs[j][key][-1] = 1
-								else:																# Add bin to right
+								else:														# Add bin to right
 									newinc = (int_min[key] - update[key][i])
 									newbin = update[key][i]
 									bin_inc[key].insert(0,newinc)
@@ -163,9 +191,10 @@ class classifier:
 								params['int_range'][key] = int_range[key]
 
 						elif isinstance(update[key][i],float) and not npy.isnan(update[key][i]):
+
 							if (update[key][i] > (float_max[key]+self.small)) or (update[key][i] < (float_min[key]-self.small)):
 								# Add a bin to appropriate side
-								if update[key][i] > float_max[key]:			# Add bin to left
+								if update[key][i] > float_max[key]:							# Add bin to left
 									newinc = (update[key][i]-float_max[key])
 									newbin = update[key][i]
 									float_inc[key].append(newinc)
@@ -179,7 +208,7 @@ class classifier:
 									for p,nam in enumerate(classes):
 										freqs[p][key].append(0)
 									freqs[j][key][-1] = 1
-								else:																# Add bin to right
+								else:														# Add bin to right
 									newinc = (float_min[key] - update[key][i])
 									newbin = update[key][i]
 									float_inc[key].insert(0,newinc)
@@ -207,6 +236,7 @@ class classifier:
 										params['float_range'][key] = float_range[key]
 
 						if isinstance("str",self.listmap[key]):
+
 							if update[key][i] is None:
 								pass
 							else:
@@ -232,54 +262,41 @@ class classifier:
 
 		return freqs,params
 
-
 	def classLearn(self,train,response):
 
 		"""
 		Naive Bayesian Classifier Initial Training Method - First call to classifier class
 		Train and build frequency table from initial training feature set stream
+
+		:arg train - dictionary containing <feature name> : list(value) pairs for each feature vector
+		:arg response - dictionary containing <target class name> : list(class value) pairs for target class vector
 		"""
 
 		try:
 			t1 = time.time()
 
+			# Validate feature vector data types on initial learning and generate self.listmap dictionary used here
+			self.validateFeatures(train)
+
 			# Row Count and Sanity Check for Bayes Classifier
 			rowtmp = []
-			for key in train:
-				rowtmp.append(len(train[key]))  # Row count of each attribute for the training set
+			for keyname in train:
+				rowtmp.append(len(train[keyname]))  # Row count of each attribute for the training set
 
-			#if min(rowtmp) != max(rowtmp):  # If row counts are not equal for all attributes, except
-			#    raise self.exceptionClass(
-			#        "422.2")  # Unprocessable Entity/Request in Learner Method - Row count for all keys not equal
 			rowcount = rowtmp[0]  # If all keys have equal rows, then assign row count to 1st index
-
-			# Attribute Count for Classifier
 			numatt = len(train)  # Number of attributes
 
-			# Determine number of unique classes from target dictionary
+			# Validate there is only a single key in classes dictionary
 			keyval = response.keys()
 			if len(keyval) > 1:
 				raise Exception ("more than 1 key for target data")
 
-			classlist = []
-			for row in response[keyval[0]]:
-				classlist.append(row)
-
-			classes = list(npy.unique(classlist))
+			# Enumerate the classes present in data
+			classlist = response[keyval[0]]
+			count_up = Counter(classlist)
+			classes = count_up.keys()
 			numclass = len(classes)
-
-			#Convert to ints from numpy int64 as needed
-			if isinstance(classes[0],int):
-				classes2 = []
-				for g in classes:
-					classes2.append(int(g))
-				classes = classes2
-
-			class_ct = [0 for i in range(0,numclass)]
-			for row in response[keyval[0]]:
-				for j,classname in enumerate(classes):
-					if classname == row:
-						class_ct[j] += 1
+			class_ct = [count_up[m] for m in classes]
 
 			if self.debug:
 				print class_ct
@@ -288,28 +305,15 @@ class classifier:
 				print classes
 				print numclass
 
-			# Determine number of unique strings in each dictionary attributes
-			stringlist = {}
+			# Determine number of unique strings in each feature vector of data type str
 			strings = {}
 			str_range = {}
-			for key in train:
-				#if isinstance(train[key][0], str) or isinstance(train[key][0], unicode):
-				# if self.listmap[key] is str or self.listmap[key] is unicode:
-				if isinstance("str",self.listmap[key]):
-					stringlist[key] = []
-					stringlist[key].append(train[key][0])
-					for entry in train[key][1:]:
-						stringlist[key].append(entry)
+			for key1 in train:
+				if isinstance("str",self.listmap[key1]):
+					strings[key1] = Counter(train[key1]).keys()
+					str_range[key1] = len(strings[key1])
 
-			for key in stringlist:
-				strings[key] = list(npy.unique(stringlist[key]))
-				str_range[key] = len(strings[key])
-
-			if self.debug:
-				t2 = time.time()
-				print t2 - t1
-
-			# Determine range bin size for float and ints for each attribute
+			# Set up frequency tables for learning
 			int_range = {}
 			bin_inc = {}
 			float_range = {}
@@ -330,9 +334,11 @@ class classifier:
 				freqdict.append({})
 				indexes[m] = [i for i,x in enumerate(classlist) if x == classname]
 
-			# Build frequency table for int/float attributes
+			# Build frequency table one feature vector at a time and handle missing values
 			for key in train:
+
 				if self.listmap[key] is int:
+
 					tmplist = [i for i in train[key][:] if isinstance(i,int)]
 					bin_min[key] = len(npy.unique(tmplist))
 					int_range[key] = npy.max(tmplist) - npy.min(tmplist)
@@ -340,7 +346,7 @@ class classifier:
 					int_max[key] = npy.max(tmplist)
 					tmpl = int_range[key] / 6
 					bin_num = npy.max([tmpl,1])
-					bin_tmp = int_range[key] / bin_num + 1
+					#bin_tmp = int_range[key] / bin_num + 1
 					bin_inc[key] = [bin_num + 1 for i in range(0,6)]
 					int_bins[key] = [int_min[key]]
 
@@ -358,6 +364,7 @@ class classifier:
 						freqdict[j][key] = list(values)
 
 				elif self.listmap[key] is float:
+
 					tmplist = [i for i in train[key][:] if not npy.isnan(i)] #isinstance(i,float)]
 					if len(tmplist) == 0:
 						float_range[key] = 0.0
@@ -387,6 +394,7 @@ class classifier:
 						freqdict[j][key] = list(values)
 
 				elif isinstance("str",self.listmap[key]):
+
 					for j,classname in enumerate(classes):  # Enumerate over classes
 						freqdict[j][key] = [0 for n in range(0,str_range[key])]
 						T = [train[key][i] for i in indexes[j]]
@@ -401,23 +409,6 @@ class classifier:
 
 			if self.debug:
 				print 'classLearn - Timing'+str(t2-t1)
-				#print 'bin_min',bin_min
-				#print 'int_bins',int_bins
-				#print 'float_bins',float_bins
-				#print 'bin_inc',bin_inc
-				#print 'int_range',int_range
-				#print 'int_min',int_min
-				#print 'float_inc',float_inc
-				#print 'float_min',float_min
-				#print 'float_range',float_range
-
-				#print "All Frequency Tables Took:"
-				t3 = time.time()
-				print t3 - t2
-
-			if self.debug:
-				t4 = time.time()
-				print t4 - t3
 
 		except Exception as e:
 			raise Exception(e)
@@ -428,20 +419,21 @@ class classifier:
 					 'numatt': numatt,'numclass': numclass,'classes': classes,'class_ct': class_ct,
 					 'strings': strings, 'int_max': int_max, 'float_max': float_max}
 
-		if self.debug:
-			print paramdict
-			print len(freqdict)
-			for j in range(0,len(classes)):
-				print j,freqdict[j]
-
 		return freqdict,paramdict
-
 
 	def classPredict(self,freqs,params,test):
 
 		"""
 		Naive Bayes Predicter method
 		Build posteriors from attributes of [test] set and priors from training
+
+		:arg freqs: dictionary of frequency tables from training including priors/likelihood estimations
+		:arg params: dictionary of states for previous feature space streams
+		:arg test: dictionary containing the current feature space stream as <feature_name> : <feature_value_list>
+		:return class_dict : dictionary containing predictions and probabilities for each class prediction
+				class_dict['class_predictions'] : predicted class for each instance in test
+				class_dict['prob_for_predictions'] : probability for each predicted class for each instance
+				class_dict['exp_for_predictions'] : exp(probability) for each predicted class for each instance
 		"""
 
 		int_range = params['int_range']
@@ -513,7 +505,7 @@ class classifier:
 						except:
 							exptmp = None
 
-				class_dict['class_predictions'].append(classtmp)
+				class_dict['class_predictions'].append(str(classtmp))
 				class_dict['prob_for_predictions'].append(round(probtmp,2))
 				class_dict['exp_for_predictions'].append(round(exptmp,3))
 
@@ -522,20 +514,28 @@ class classifier:
 
 		return class_dict
 
-
-	def classAcc(self,class_dict,responsedata,tagname="all",metadata=None):
+	@staticmethod
+	def classAcc(class_dict,responsedata,tagname="all",metadata=None):
 
 		"""
 		Determine precision, recall, F-1 score and composite accuracy for each class predicted
+
+		:arg class_dict : dictionary of predicted classes for each instance as returned by classPredict()
+		:arg responsedata : dictionary of current target classes for test data set
+		:return acc_dict : dictionary containing error statistics for predictions
+				acc_dict['precision'] - Precision for each predicted class in data set
+				acc_dict['recall'] - Recall for each predicted class in data set
+				acc_dict['f1_scores']  - F1 scores for each predicted class in data set
+				acc_dict['class_names'] - all unique class names in data set
+				acc_dict['Composite_Accuracy'] - a weighted sum of F1 scores by class priors
 		"""
 
-		#Determine keyname
+		# Get target class key
 		keyname = responsedata.keys()[0]
 
 		#First pull appropriate rows for certain tag if metadata exists
 		if metadata is not None:
 			taglist = [i for i in range(0,len(metadata["tag"])) if tagname in metadata["tag"][i]]
-			print len(taglist),len(responsedata[keyname]),len(metadata["tag"])
 		else:
 			taglist = [i for i in range(0,len(responsedata[keyname]))]
 
@@ -550,11 +550,10 @@ class classifier:
 
 		# Check that type for classes are consistent from train and test sets
 		if type(class_dict['classes'][0]) != type(responsedata[keyname][0]):
+			print type(class_dict['classes'][0]),type(responsedata[keyname][0])
 			raise Exception("Response array types mismatch between train and predict classification data")
 
 		try:
-			rows = len(responsedata[keyname][:])
-			#for i in range(0, rows):
 			for i in taglist:
 				for j in range(0,len(class_dict['classes'])):
 					if class_dict['class_predictions'][i] == class_dict['classes'][j] and \
@@ -597,152 +596,9 @@ class classifier:
 
 		return acc_dict
 
-
 if __name__ == "__main__":
 
 	"""
-	Class-Level Tester
+	For class-level tests see /tests/bayes_tests.py
 	"""
 
-	from sys import argv
-	import json
-
-	if argv[1] == "train":  # Training
-		try:
-			# Load data from file
-			data_file = argv[2]
-			dfile = open(data_file, "r")
-			data1 = json.load(dfile)  # Initial independent variable dataset
-			try:
-				response_file = argv[3]
-				rfile = open(response_file, "r")
-				responsedata = json.load(rfile)  # Initial response dataset
-			except:
-				responsedata = data1['response']
-				data1.pop("response")
-
-			try:
-				data = data1["data_set"]
-			except:
-				data = data1
-
-		except Exception as e:
-			raise Exception('One or more of your input files are absent for unreadable')
-
-		#Validate data
-		listhash = {'data_set_map':{}}
-		for key in data:
-			#print key
-			if any(isinstance(n,float) for n in data[key][:]):
-				value = float
-			elif any(isinstance(n,int) for n in data[key][:]):
-				value = int
-			elif any(isinstance(n, (str, unicode)) for n in data[key][:]):
-				value = str
-			listhash['data_set_map'][key] = value
-
-		#Instantiate learner class
-		lrner = classifier(listhash)
-
-	if argv[1] == "test":  # Testing/Predictions
-		# Read priors_dict and pars_dict from files for classifications
-		# This will be replaced by server cookie or DB storage using userid instead of dummy file names
-
-		try:
-			# Load data from file
-			data_file = argv[2]
-			file1 = open("priors.json", "r")
-			priors_dict = json.load(file1)
-			file1.close()
-			file2 = open("params.json", "r")
-			pars_dict = json.load(file2)
-			file2.close()
-			dfile = open(data_file, "r")
-			data1 = json.load(dfile)  # Initial independent variable dataset
-			try:
-				data = data1["data_set"]
-			except:
-				data = data1
-			#data = data1["data"]
-
-		except Exception as e:
-			raise Exception('One or more of your input files are absent for unreadable')
-
-		#Validate data
-		listhash = {'data_set_map':{}}
-		for key in data:
-			if any(isinstance(n,float) for n in data[key][:]):
-				value = float
-			elif any(isinstance(n,int) for n in data[key][:]):
-				value = int
-			elif any(isinstance(n, (str, unicode)) for n in data[key][:]):
-				value = str
-			listhash['data_set_map'][key] = value
-
-		#Instantiate learner class
-		lrner = classifier(listhash)
-
-	if argv[1] == "train":  # Training
-		#data_dict = lrner.dataNorm(data,responsedata)		# Z-score normalization of data for PC regression
-		#[data_dict['covdat'],data_dict['eigs'],data_dict['vals']] =  lrner.pcaCompute(data_dict)	# PCA compression for PC regression
-		#regr_model_dict = lrner.pcaLearn(data_dict)
-		#print regr_model_dict
-
-		#lrner2 = classifier(GlowfishException,listhash)
-		t1= time.time()
-		for k in range(0,1): #100):
-			#mind = k*800
-			mind = 0
-			maxd = 1000000
-			#maxd = (k+1)*800
-			datatmp = {k:data[k][mind:maxd] for k in data.keys()}
-			responsetmp = {k:responsedata[k][mind:maxd] for k in responsedata.keys()}
-			print len(datatmp[datatmp.keys()[0]][:]),mind,maxd,k
-			print len(responsetmp[responsetmp.keys()[0]][:])
-			if k == 0:
-				[priors_dict, pars_dict] = lrner.classLearn(datatmp, responsetmp)  # Run learner
-				#print priors_dict[0]
-				#print priors_dict[1]
-				#print pars_dict['float_bins']['euribor3m'],pars_dict['float_inc']['euribor3m']
-				#print pars_dict['float_bins']['nr.employed'],pars_dict['float_inc']['nr.employed']
-				for h in pars_dict['int_bins'].keys():
-					print h,len(pars_dict['int_bins'][h]),pars_dict['int_bins'][h],pars_dict['int_max'][h],pars_dict['int_min'][h]
-				for h in pars_dict['float_bins'].keys():
-					print h,len(pars_dict['float_bins'][h])
-				for h in pars_dict['strings'].keys():
-					print h,pars_dict['strings'][h]
-				#print 'marital',priors_dict[0]["marital"] #,priors_dict[1]["marital"]
-			else:
-				[priors_dict, pars_dict] = lrner.classUpdate(priors_dict, pars_dict, datatmp, responsetmp)  # Run learner
-				# print priors_dict[0]
-				# print priors_dict[1]
-				for h in pars_dict['int_bins'].keys():
-					print h,len(pars_dict['int_bins'][h]),pars_dict['int_bins'][h],pars_dict['int_max'][h],pars_dict['int_min'][h]
-				for h in pars_dict['float_bins'].keys():
-					print h,len(pars_dict['float_bins'][h])
-				for h in pars_dict['strings'].keys():
-					print h,pars_dict['strings'][h]
-				#print 'marital',priors_dict[0]["marital"] #,priors_dict[1]["marital"]
-		# Write priors_dict and pars_dict to files for later classifications
-		# This will be replaced by server cookie or DB storage using userid instead of dummy file names
-		t2= time.time()
-		print 'total_time',t2-t1
-		file1 = open("priors.json", "w")
-		#print priors_dict
-		#json.dumps(priors_dict)
-		json.dump(priors_dict, file1)
-		file1.close()
-		file2 = open("params.json", "w")
-		json.dump(pars_dict, file2)
-		file2.close()
-
-	else:  # Testing/Predictions
-		class_dict2 = lrner.classPredict(priors_dict, pars_dict, data)  # Run predicter
-
-		# Run precision,recall,F1 statistics
-		response_file = argv[3]
-		rfile = open(response_file, "r")
-		responsedata = json.load(rfile)
-		print 'done with predict'
-		outdict = lrner.classAcc(class_dict2, responsedata,"all")
-		print outdict
