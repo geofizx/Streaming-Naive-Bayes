@@ -46,6 +46,7 @@ if Chebyshev is True:
 	tmpval2 = tmpvals.reshape(11,11)
 
 	fig = pl.figure()
+	pl.title("Chebyshev Polynomial Basis")
 	ax = fig.add_subplot(131, projection='3d',title="True Function")
 	ax.plot_surface(xx, yy, tmpval2,  rstride=1, cstride=1, cmap=cm.jet)
 	ax = fig.add_subplot(132, projection='3d',title="Interpolation")
@@ -80,6 +81,7 @@ if Clenshaw is True:
 	tmpval2 = tmpvals.reshape(11,11)
 
 	fig = pl.figure()
+	pl.title("Clenshaw-Curtis Piece-Wise Linear Basis")
 	ax = fig.add_subplot(131, projection='3d',title="True Function")
 	ax.plot_surface(xx, yy, tmpval2,  rstride=1, cstride=1, cmap=cm.jet)
 	ax = fig.add_subplot(132, projection='3d',title="Interpolation")
