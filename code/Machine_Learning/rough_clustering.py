@@ -170,12 +170,10 @@ class roughCluster():
 		#"Coverage" : maximize cluster coverage
 		#"Combined" : maximize combined coverage and lower approximation
 
-# TODO clean code
-
 		print self.clusters
 
 		for q,clusters in enumerate(self.clusters):
-			self.pruned[q] = {"cluster_num":{},"SumLowerA":{},"SumUpperA":{},"PercentCovered":{}}
+			self.pruned[q] = {"cluster_num":{},"sum_lower":{},"sum_upper":{},"percent_covered":{},"cluster_list":{}}
 			cluster_upper_approx = {g : len(clusters[g]) for g in clusters}
 			tmpmem = sorted(cluster_upper_approx.iteritems(), key=operator.itemgetter(1),reverse=True)
 			#print "1",tmpmem
@@ -220,10 +218,11 @@ class roughCluster():
 					(len(Counter(cluster_list1[p]).keys())/float(self.total_entities))*100.0
 
 				# Pack stats into output and plot
+				self.pruned[q]["cluster_list"][p] = clusters1[p]
 				self.pruned[q]["cluster_num"][p] = cluster_count1[p]
-				self.pruned[q]["SumLowerA"][p] = sum_lower1
-				self.pruned[q]["SumUpperA"][p] = sum_upper1
-				self.pruned[q]["PercentCovered"][p] = (len(Counter(cluster_list1[p]).keys())/float(self.total_entities))*100.0
+				self.pruned[q]["sum_lower"][p] = sum_lower1
+				self.pruned[q]["sum_upper"][p] = sum_upper1
+				self.pruned[q]["percent_covered"][p] = (len(Counter(cluster_list1[p]).keys())/float(self.total_entities))*100.0
 
 		return
 
