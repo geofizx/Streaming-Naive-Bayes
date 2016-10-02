@@ -187,7 +187,8 @@ class roughCluster():
 			self.clusters.append(clusters)
 
 # TODO run optimizeCluster() to get max_clusters stats at current distance D
-
+			# Prune clusters based on self.max_clusters
+			self.optimizeClusters()
 			# Check objective for early stopping if optimal distance D is achieved
 			early_stop = self.checkObjective()
 			if early_stop is True:
@@ -199,40 +200,33 @@ class roughCluster():
 
 		"""
 		Check objective to determine if optimal distance D has been achieved
-		:return: check_value (bool) - True if Objective met, else False
+
+		:return: True if Objective maximum achieved, else return False
 		"""
 
-		check_value = False
-
 		if self.objective == "lower":
-			pass
+			#self.pruned[q]["sum_lower"][p]
+			return True
 		elif self.objective == "upper":
-			pass
+			#self.pruned[q]["sum_upper"][p]
+			return True
 		elif self.objective == "ratio":
-			pass
-
-		return check_value
+			#self.pruned[q]["percent_covered"][p]
+			return True
+		else:
+			return False
 
 	def optimizeClusters(self):
 
 		"""
-		Prune all maxD clusters to number of clusters specified in self.max_clusters, and determine associated optimal
-		distance D and associated rough clusters from all maxD clusters returned by enumerateClusters() by
-		maximizing objective. If objective is None, maximize sum of upper approximation.
+		Prune all maxD clusters to number of clusters specified in self.max_clusters and associated rough clusters
+		from all maxD clusters returned by enumerateClusters()
 
 		:arg self.clusters : dictionary return of enumerateClusters() containing rough clusters and upper/lower approximation sums
 		:arg self.total_entities : total number of entities to be clustered
-		:arg self.objective (optional) : cluster attribute to maximize ("All","Upper", "Lower", "Coverage", "Combined")
 		:return pruned : dictionary containing N clusters that maximize upper approximation
 
 		"""
-
-# TODO add in objective function below to determine optimal D for:
-		#"all" : return all pruned clusters
-		#"Upper" : maximize upper approximation
-		#"Lower" : maximize lower approximation
-		#"Coverage" : maximize cluster coverage
-		#"Combined" : maximize combined coverage and lower approximation
 
 		print self.clusters
 
