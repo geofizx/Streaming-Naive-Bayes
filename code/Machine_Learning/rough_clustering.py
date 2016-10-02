@@ -6,6 +6,10 @@ An implementation of rough clustering using rough set theory and the algorithm o
 "Cluster Analysis of Marketing Data Examining On-line Shopping Orientation: A Comparison of k-means and
 Rough Clustering Approaches"
 
+@options
+maxD - Maximum entity distance for stopping further clustering, if maxD == number of instances, all identities are in all clusters
+max_clusters - list containing the one or more integer for max number of clusters to output
+
 @author Michael Tompkins
 @copyright 2016
 """
@@ -16,32 +20,41 @@ import itertools
 import operator
 from collections import Counter
 import numpy as npy
-# import clustering
-# import matplotlib.pyplot as plt
-# import featureSelection
 
 #Internals
 
 class roughCluster():
 
-	def __init__(self,input_data,max_d=None,max_clusters=None):
+	def __init__(self,input_data,max_d,max_clusters=None):
 
+		# Clustering output vars
 		self.data = input_data
+		self.clusters = []
+		self.sum_upper = []
+		self.sum_lower = []
+		self.cluster_list = []
+		self.total_entities = 0
+		self.pruned = {}
+
 		self.debug = True
 		self.small = 1.0e-10
 
-		if max_d is None:
-			self.maxD = 18	# Maximum entity distance for stopping further clustering, if maxD == number of instances, all identities are in all clusters
-		else:
-			self.maxD = max_d
+		# Clustering options
+		self.maxD = max_d
+
 		if max_clusters is None:
-			self.max_clusters = [2,3,5,10]	# Used for rejection of clusters when maximizing the sum of lower approximations for all clusters
+			self.max_clusters = [5,10]	# Used for rejection of clusters when maximizing the sum of lower approximations for all clusters
 		else:
 			self.max_clusters = max_clusters
 
 	def enumerateClusters(self):
 
-		results = {"sum_lower":[],"sum_upper":[],"cluster_list":[],"total_ents":None,"clusters":[]}
+		"""
+		Method to enumerate rough clusters given distance measures between all pairs of input entities, and
+		:return:
+		"""
+# TODO add description
+# TODO clean code
 
 		# Compute distance matrix for all pairs
 		header = self.data.keys()
@@ -129,13 +142,90 @@ class roughCluster():
 				sum_lower = sum_all
 				sum_upper = sum_all
 
-			results["sum_lower"].append(sum_lower)
-			results["sum_upper"].append(sum_upper)
-			results["cluster_list"].append(cluster_list)
-			results["total_ents"] = total_ents
-			results["clusters"].append(clusters)
+			self.sum_lower.append(sum_lower)
+			self.sum_upper.append(sum_upper)
+			self.cluster_list.append(cluster_list)
+			self.clusters.append(clusters)
+			self.total_entities = total_ents
 
-		return results
+		return
+
+	def optimizeClusters(self,objective="All"):
+
+		"""
+		Prune all maxD clusters to number of clusters specified in self.max_clusters, and determine associated optimal
+		distance D and associated rough clusters from all maxD clusters returned by enumerateClusters() by
+		maximizing objective. If objective is None, maximize sum of upper approximation.
+
+		:arg results : dictionary return of enumerateClusters() containing rough clusters and upper/lower approximation sums
+		:arg objective (optional) : cluster attribute to maximize ("All","Upper", "Lower", "Coverage", "Combined")
+		:return pruned : dictionary containing N clusters that maximize upper approximation
+
+		"""
+
+# TODO add in objective function below to determine optimal D for:
+		#"all" : return all pruned clusters
+		#"Upper" : maximize upper approximation
+		#"Lower" : maximize lower approximation
+		#"Coverage" : maximize cluster coverage
+		#"Combined" : maximize combined coverage and lower approximation
+
+# TODO clean code
+
+		print self.clusters
+
+		for q,clusters in enumerate(self.clusters):
+			self.pruned[q] = {"cluster_num":{},"SumLowerA":{},"SumUpperA":{},"PercentCovered":{}}
+			cluster_upper_approx = {g : len(clusters[g]) for g in clusters}
+			tmpmem = sorted(cluster_upper_approx.iteritems(), key=operator.itemgetter(1),reverse=True)
+			#print "1",tmpmem
+			#tmpmem = sorted(int_tmp.iteritems(), key=operator.itemgetter(1),reverse=True)
+			#print "2",tmpmem
+			clusters1 = []
+			cluster_count1 = []
+			cluster_list1 = []
+			for p,value in enumerate(self.max_clusters):
+				sorted_clusters = [t[0] for t in tmpmem[0:self.max_clusters[p]]]
+				clusters1.append({key : clusters[key] for key in sorted_clusters})
+				cluster_count1.append(len(clusters1[p].keys()))
+				cluster_list1.append(list(itertools.chain(*[clusters1[p][g] for g in clusters1[p].keys()])))
+				#print "Pruned Clusters for maxD: ",i," and maxClusters: ",max_clusters[p]," : ",cluster_count1[p],len(cluster_list1[p])
+				# Compute upper/lower approximations for pruned clusters
+				sum_all_1 = len(list(itertools.chain(*[clusters1[p][g] for g in clusters1[p].keys() if clusters1])))
+				sum_lower1 = 0
+				sum_upper1 = 0
+				intersections1 = {}
+				if len(clusters1[p].keys()) > 1:
+					for key1 in clusters1[p]:
+						#print key1
+						intersections1[key1] = {key2 : list(set(clusters1[p][key1]).intersection(set(clusters1[p][key2])))
+										 for key2 in clusters1[p] if key2 != key1}
+						#print list(itertools.chain(*[intersections[key1][g] for g in intersections[key1]]))
+						int_tmp1 = len(Counter(list(itertools.chain(*[intersections1[key1][g] for g in intersections1[key1]]))))
+						#int_tmp = npy.sum([intersections[key1][g] for g in intersections[key1]])
+						#print "total, intersections, lower",key1,len(clusters[key1]),int_tmp
+						sum_lower1 += (len(clusters1[p][key1]) - int_tmp1) #intersections[key1])
+						sum_upper1 += len(clusters1[p][key1])
+						#print len(clusters1[p][key1]),int_tmp1,sum_upper1,sum_lower1
+
+				else:
+					sum_lower1 = sum_all_1
+					sum_upper1 = sum_all_1
+
+				print "Results for : ",self.max_clusters[p]," Pruned Clusters"
+				print "Sum of Lower Approximation for Pruned Clusters :",sum_lower1
+				print "Sum of Upper Approximations for Pruned Clusters",sum_upper1
+				print "Number of Entities Covered for Pruned Clusters",len(Counter(cluster_list1[p]).keys())
+				print "Percentage of Entities Covered for Pruned Clusters", \
+					(len(Counter(cluster_list1[p]).keys())/float(self.total_entities))*100.0
+
+				# Pack stats into output and plot
+				self.pruned[q]["cluster_num"][p] = cluster_count1[p]
+				self.pruned[q]["SumLowerA"][p] = sum_lower1
+				self.pruned[q]["SumUpperA"][p] = sum_upper1
+				self.pruned[q]["PercentCovered"][p] = (len(Counter(cluster_list1[p]).keys())/float(self.total_entities))*100.0
+
+		return
 
 if __name__ == "__main__":
 

@@ -15,7 +15,7 @@ from Machine_Learning import roughCluster
 
 # Set some rough clustering parameters
 maxD = 18
-max_clusters = [2,3,5,10]
+max_clusters = [2]
 
 # Load some data
 file2 = open("german_all.json","r")
@@ -50,5 +50,8 @@ for key in data["payload"].keys():
 
 # Instantiate and run rough clustering
 clust = roughCluster(data2,maxD,max_clusters)
-output = clust.enumerateClusters()
-print output
+clust.enumerateClusters()
+clust.optimizeClusters()
+print clust.clusters
+print clust.sum_upper
+print clust.sum_lower
