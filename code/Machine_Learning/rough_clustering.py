@@ -7,8 +7,15 @@ An implementation of rough clustering using rough set theory and the algorithm o
 Rough Clustering Approaches"
 
 @options
-maxD - Maximum entity distance for stopping further clustering, if maxD == number of instances, all identities are in all clusters
 max_clusters - list containing the one or more integer for max number of clusters to output
+maxD - Maximum entity distance for stopping further clustering
+
+if maxD == number of instances to be clustered, then the algorithm stops clustering when the optimal distance D is
+		achieved based on option 'objective' which maximizes :
+		"lower" : sum of lower approximations (default) - maximum entity uniqueness across all clusters at distance D
+		"coverage" : sum of total cluster entites - maximum number of entities across all clusters at distance D
+		"ratio" : ratio of lower/coverage - maximum ratio of unique entities to total entities across all clusters at distance D
+		"all" : return clusters at every distance D from [0 - self.total_entities]
 
 @author Michael Tompkins
 @copyright 2016
@@ -25,10 +32,12 @@ import numpy as npy
 
 class roughCluster():
 
-	def __init__(self,input_data,max_d,max_clusters=None):
+	def __init__(self,input_data,objective="lower",max_d=None,max_clusters=None):
 
 		# Clustering output vars
 		self.data = input_data
+		self.distance = {}
+		self.all_keys = {}
 		self.clusters = []
 		self.sum_upper = []
 		self.sum_lower = []
@@ -40,53 +49,83 @@ class roughCluster():
 		self.small = 1.0e-10
 
 		# Clustering options
-		self.maxD = max_d
-
+		self.maxD = max_d				# Maximum intra-entity distance to perform clustering over
+		self.minD = None				# Minimum intra-entity fistance to perform - TBD in getEntityDistances()
+		self.objective = objective		# Objective to maximize for optimal clustering distance D
 		if max_clusters is None:
-			self.max_clusters = [5,10]	# Used for rejection of clusters when maximizing the sum of lower approximations for all clusters
+			self.max_clusters = [2,5,10]	# Used for rejection of clusters when maximizing the sum of lower approximations for all clusters
 		else:
 			self.max_clusters = max_clusters
+
+	def getEntityDistances(self):
+
+		"""
+		Compute intra-entity distance matrix for all unique entities in input
+
+		:arg self.data
+		:return: self.distance : intra-entity distances for all unique (lower traingular) pairs of entities
+		"""
+
+		header = self.data.keys()
+		data_length = len(self.data[header[0]])
+
+		if self.debug is True:
+			print "Data Length",data_length
+
+		for k in range(0,data_length):
+			self.distance[str(k)] = {str(j) : sum([abs(self.data[val][k]-self.data[val][j]) for val in header])
+										for j in range(0,data_length)}
+
+		# Form lower triangular form of all pairs (p,q) where p != q	# No repeats
+		self.all_keys = {key : None for key in self.distance.keys()}	# Static all entity keys
+		curr_keys = {key : None for key in self.distance.keys()}		# Place holder entity keys
+		self.total_entities = len(curr_keys.keys())
+
+		if self.debug is True:
+			print "Total Entities", self.total_entities
+
+		distance = {}
+		for key1 in self.distance:	# Full pair p,q lower triangular integer distance matrix enumeration
+			curr_keys.pop(key1)
+			self.distance[key1] = {key2 : int(self.distance[key1][key2]) for key2 in curr_keys.keys()}
+
+		# Update maxD = self.total_entities if not specified on instantiation
+		if self.maxD is None:
+			self.maxD = self.total_entities
+
+# TODO add minD computation here
+		self.minD = 18
+
+		return
 
 	def enumerateClusters(self):
 
 		"""
-		Method to enumerate rough clusters given distance measures between all pairs of input entities, and
-		:return:
+		Method to enumerate rough clusters given optimal distance measure between all pairs of input entities
+
+		:return : self.sum_lower - lower approximation for each cluster at each distance D
+		:return : self.sum_upper - upper approximation for each cluster at each distance D
+		:return : self.cluster_list - list of all entities in clusters at each distance D
+		:return : self.clusters - list of clusters at each distance D
 		"""
+
 # TODO add description
 # TODO clean code
-
-		# Compute distance matrix for all pairs
-		header = self.data.keys()
-		data_length = len(self.data[header[0]])
-		print "Data Length",data_length
-		self.data["distance"] = {}
-		for k in range(0,data_length):
-			self.data["distance"][str(k)] = {str(j) : sum([abs(self.data[val][k]-self.data[val][j]) for val in header])
-										for j in range(0,data_length)}
-
-		# Form lower triangular form of all pairs (p,q) where p != q	# No repeats
-		all_keys = {key : None for key in self.data["distance"].keys()}		# Static all entity keys
-		curr_keys = {key : None for key in self.data["distance"].keys()}		# Place holder entity keys
-		total_ents = len(curr_keys.keys())
-		print "Total Entities", total_ents
-		distance = {}
-		for key1 in self.data["distance"]:	# Full pair p,q lower triangular integer distance matrix enumeration
-			curr_keys.pop(key1)
-			distance[key1] = {key2 : int(self.data["distance"][key1][key2]) for key2 in curr_keys.keys()}
+# TODO add objective test here for early stopping
+# TODO add minimum number of distances to perform based on stats of distances for all entities
 
 		# Loop over min distance D from 0:maxD and find candidate pairs with distance < i
 		#out_stat1 = {"cluster_num":[],"SumLowerA":[],"SumUpperA":[],"PercentCovered":[]}
 		#out_stat2 = [{"cluster_num":[],"SumLowerA":[],"SumUpperA":[],"PercentCovered":[]} for p in range(len(max_clusters))]
-		for i in range(0,self.maxD):
+		for i in range(0,min([self.minD,self.maxD])):
 			ct2 = 0
 			cluster_count = 0
 			cluster_list = []
 			clusters = {}
 			first_cluster = {}
 			# Find entity pairs that have distance < i
-			#print distance[key1][]
-			candidates = {key1:[key2 for key2 in distance[key1].keys() if distance[key1][key2] <= i ] for key1 in all_keys}
+			candidates = {key1:[key2 for key2 in self.distance[key1].keys() if self.distance[key1][key2] <= i ]
+						  for key1 in self.all_keys}
 			print "# Candidate Pairs",i,len(list(itertools.chain(*[candidates[g] for g in candidates.keys()]))) #,max(candidates),min(candidates),npy.mean(candidates)
 			# Determine for all pairs if pairs are to be assigned to new clusters or previous clusters
 			#superset[key1] = {key2 : list(itertools.chain(*[self.T_attrs[g] for g in obj1[key2]]))
@@ -146,19 +185,44 @@ class roughCluster():
 			self.sum_upper.append(sum_upper)
 			self.cluster_list.append(cluster_list)
 			self.clusters.append(clusters)
-			self.total_entities = total_ents
+
+# TODO run optimizeCluster() to get max_clusters stats at current distance D
+
+			# Check objective for early stopping if optimal distance D is achieved
+			early_stop = self.checkObjective()
+			if early_stop is True:
+				return
 
 		return
 
-	def optimizeClusters(self,objective="All"):
+	def checkObjective(self):
+
+		"""
+		Check objective to determine if optimal distance D has been achieved
+		:return: check_value (bool) - True if Objective met, else False
+		"""
+
+		check_value = False
+
+		if self.objective == "lower":
+			pass
+		elif self.objective == "upper":
+			pass
+		elif self.objective == "ratio":
+			pass
+
+		return check_value
+
+	def optimizeClusters(self):
 
 		"""
 		Prune all maxD clusters to number of clusters specified in self.max_clusters, and determine associated optimal
 		distance D and associated rough clusters from all maxD clusters returned by enumerateClusters() by
 		maximizing objective. If objective is None, maximize sum of upper approximation.
 
-		:arg results : dictionary return of enumerateClusters() containing rough clusters and upper/lower approximation sums
-		:arg objective (optional) : cluster attribute to maximize ("All","Upper", "Lower", "Coverage", "Combined")
+		:arg self.clusters : dictionary return of enumerateClusters() containing rough clusters and upper/lower approximation sums
+		:arg self.total_entities : total number of entities to be clustered
+		:arg self.objective (optional) : cluster attribute to maximize ("All","Upper", "Lower", "Coverage", "Combined")
 		:return pruned : dictionary containing N clusters that maximize upper approximation
 
 		"""

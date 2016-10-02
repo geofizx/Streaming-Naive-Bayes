@@ -52,9 +52,11 @@ for key in data["payload"].keys():
 			data2[key].append(encoding[data["payload"][key][n]])
 
 # Instantiate and run rough clustering
-clust = roughCluster(data2,maxD,max_clusters)
+clust = roughCluster(data2,"lower",maxD,max_clusters)
+clust.getEntityDistances()
 clust.enumerateClusters()
 clust.optimizeClusters()
+
 print clust.clusters
 print clust.sum_upper
 print clust.sum_lower
