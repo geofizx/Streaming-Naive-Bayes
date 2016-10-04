@@ -30,7 +30,6 @@ header = []
 data2 = {}
 for key in data["payload"].keys():
 	header.append(key)
-	#print key,len(Counter(data["payload"][key]).keys()),Counter(data["payload"][key]).keys()
 	try:
 		data2[key] = [int(data["payload"][key][m]) for m in range(0,len(data["payload"][key]))]
 		if key == "amount":
@@ -43,7 +42,6 @@ for key in data["payload"].keys():
 	except:
 		data2[key] = []
 		encoding = {key : m for m,key in enumerate(Counter(data["payload"][key]).keys())}
-		#print key,encoding
 		for n in range(len(data["payload"][key])):
 			data2[key].append(encoding[data["payload"][key][n]])
 
@@ -71,11 +69,11 @@ for key in header:
 datav = npy.asfarray(tableau_lists).T
 data1 = npy.asarray(tableau_1).T
 data3 = npy.asarray(tableau_2).T
-plt.scatter(npy.squeeze(data1[:,2]),npy.squeeze(data1[:,13]),c="b",label="Good")
-plt.hold(True)
-plt.scatter(npy.squeeze(data3[:,2]),npy.squeeze(data3[:,13]),c="r",label="Bad")
-plt.title("Checking Account versus Account Duration for Credit Risk")
-plt.show()
+# plt.scatter(npy.squeeze(data1[:,2]),npy.squeeze(data1[:,13]),c="b",label="Good")
+# plt.hold(True)
+# plt.scatter(npy.squeeze(data3[:,2]),npy.squeeze(data3[:,13]),c="r",label="Bad")
+# plt.title("Checking Account versus Account Duration for Credit Risk")
+# plt.show()
 
 mean1 = npy.mean(data1,axis=0)
 mean2 = npy.mean(data3,axis=0)
@@ -112,13 +110,13 @@ plt.hold(True)
 axs.errorbar(range(20),mean1,fmt='bo',yerr=std1,label="True Bad Centroid")
 axs.errorbar(rangek,meankp[1],fmt='r+',yerr=stddevk[0],label="Kmeans 0")
 axs.errorbar(rangek,meankp[0],fmt='b+',yerr=stddevk[1],label="Kmeans 1")
-print "Optimal",clust.pruned[key1]
-print "Optimal D",clust.opt_d
+print "Optimal Clusters",clust.pruned[key1]
+print "Optimal Intra-Entity Distance",clust.opt_d
 markers = ['bv','rv','gv','kv']
 ct = 0
 for key in clust.pruned[key1]["cluster_list"][max_clusters]:
-	print key,clust.pruned[key1]["cluster_list"][max_clusters].keys()
-	print clust.pruned[key1]["cluster_list"][max_clusters][key]
+	#print key,clust.pruned[key1]["cluster_list"][max_clusters].keys()
+	#print clust.pruned[key1]["cluster_list"][max_clusters][key]
 	datav2 = []
 	meant = []
 	stdt = []

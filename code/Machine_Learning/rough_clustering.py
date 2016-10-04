@@ -52,7 +52,7 @@ class roughCluster():
 		self.optimal = {}
 		self.opt_d = None
 
-		self.debug = True
+		self.debug = False
 		self.small = 1.0e-10
 
 		# Clustering options
