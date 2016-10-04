@@ -58,6 +58,7 @@ class roughCluster():
 		self.small = 1.0e-10
 
 		# Clustering options
+		self.minD = None					# Minimum intra-entity distance to perform clustering over
 		self.maxD = max_d					# Maximum intra-entity distance to perform clustering over
 		self.objective = objective			# Objective to maximize for optimal clustering distance D
 		self.max_clusters = [max_clusters]	# Number of clusters to return
@@ -106,29 +107,39 @@ class roughCluster():
 		header = self.data.keys()
 		data_length = len(self.data[header[0]])
 
-# TODO remove enumeration of entire distance matrix below
-		# Enumerate entire distance matrix --
+		t1 = time.time()
+
+		# Enumerate entire distance matrix
 		for k in range(0,data_length):
 			self.distance[str(k)] = {str(j) : sum([abs(self.data[val][k]-self.data[val][j]) for val in header])
 										for j in range(0,data_length)}
 
+		curr_dists = list(itertools.chain([self.distance[h][g] for h in self.distance for g in self.distance[h]]))
+		self.minD = int(max([npy.percentile(curr_dists,2),2]))
 		if self.maxD is None:	# Determine maxD based on 25th percentile of all intra-cluster distances
-			curr_dists = list(itertools.chain([self.distance[h][g] for h in self.distance for g in self.distance[h]]))
 			self.maxD = int(max([npy.percentile(curr_dists,25),3]))
 
-		self.all_keys = {key : None for key in self.distance.keys()}	# Static all entity keys
-		curr_keys = {key : None for key in self.distance.keys()}		# Place holder entity keys
+
+		self.all_keys = {str(key) : None for key in range(0,data_length)}	# Static all entity keys
+		curr_keys = {str(key) : None for key in range(0,data_length)}		# Place holder entity keys
 		self.total_entities = len(curr_keys.keys())
 
 		# Compute distance of all pairs (p,q) where p != q
-		for key1 in self.distance:	# Full pair p,q lower triangular integer distance matrix enumeration
+		#for key1 in self.all_keys:	# Full pair p,q lower triangular integer distance matrix enumeration
+		for k in range(0,data_length):
+			key1 = str(k)
 			curr_keys.pop(key1)
+			#self.distance[key1] = {key2 : int(sum([abs(self.data[val][k]-self.data[val][int(key2)]) for val in header]))
+			#					   for key2 in curr_keys.keys()}
 			self.distance[key1] = {key2 : int(self.distance[key1][key2]) for key2 in curr_keys.keys()}
 
+		t2 = time.time()
 		if self.debug is True:
+			print "time",t2-t1
 			print "Total Entities to Cluster:", self.total_entities
 			print "Input Feature Length",len(header)
 			print "Max Intra-Entity Distance to Cluster:",self.maxD
+			print "Min Intra-Entity Distance to Cluster:",self.minD
 
 		return
 
@@ -211,27 +222,27 @@ class roughCluster():
 	def optimizeClusters(self):
 
 		"""
-		Maximize objective over all distances D to determine optimal distance clustering
+		Maximize objective over all distances D [self.minD : self.maxD] to determine optimal distance clustering
 
 		:return: self.opt_d : optimal integer distance D
 		"""
 
 		if self.objective == "lower":
 			lst = {h : list(itertools.chain([self.pruned[h]["sum_lower"][g] for g in self.pruned[h]["sum_lower"]]))
-				   for h in self.pruned}
+				   for h in self.pruned if int(h) >= self.minD}
 			sort_lst = sorted(lst.iteritems(), key=operator.itemgetter(1),reverse=True)
 			self.opt_d = sort_lst[0][0]
 
 		elif self.objective == "coverage":
-			lst = {h : list(itertools.chain([self.pruned[h]["sum_upper"][g] for
-										 g in self.pruned[h]["sum_upper"].keys()])) for h in self.pruned}
+			lst = {h : list(itertools.chain([self.pruned[h]["sum_upper"][g] for g in self.pruned[h]["sum_upper"].keys()]))
+				   for h in self.pruned if int(h) >= self.minD}
 			sort_lst = sorted(lst.iteritems(), key=operator.itemgetter(1),reverse=True)
 			self.opt_d = sort_lst[0][0]
 
 		elif self.objective == "ratio":
 			lst = {h : list(itertools.chain([float(self.pruned[h]["sum_lower"][g])/
-												self.pruned[h]["sum_upper"][g] for g in
-												self.pruned[h]["sum_upper"].keys()])) for h in self.pruned}
+											 self.pruned[h]["sum_upper"][g] for g in self.pruned[h]["sum_upper"].keys()])) for h in self.pruned
+				   if int(h) >= self.minD}
 			sort_lst = sorted(lst.iteritems(), key=operator.itemgetter(1),reverse=True)
 			self.opt_d = sort_lst[0][0]
 
@@ -296,6 +307,7 @@ class roughCluster():
 					sum_lower1 = sum_all_1
 					sum_upper1 = sum_all_1
 
+				print "Intra-Entity Distance : ",q
 				print "Results for : ",self.max_clusters[p]," Pruned Clusters"
 				print "Sum of Lower Approximation for Pruned Clusters :",sum_lower1
 				print "Sum of Upper Approximations for Pruned Clusters",sum_upper1
