@@ -69,7 +69,7 @@ class roughCluster():
 		:arg self.data : dictionary of <feature_name> : feature vector list pairs of types (str, int, float)
 		:return: self.dataT : dictionary containing integer transformation of all features in feature space
 		"""
-# TODO finish this transformation method
+		# TODO finish this transformation method
 
 		for keyname in self.data:
 
@@ -123,7 +123,6 @@ class roughCluster():
 		self.total_entities = len(curr_keys.keys())
 
 		# Compute distance of all pairs (p,q) where p != q
-		#for key1 in self.all_keys:	# Full pair p,q lower triangular integer distance matrix enumeration
 		for k in range(0,data_length):
 			key1 = str(k)
 			curr_keys.pop(key1)
@@ -144,16 +143,13 @@ class roughCluster():
 	def enumerateClusters(self):
 
 		"""
-		Method to enumerate rough clusters given optimal distance measure between all pairs of input entities
+		Method to enumerate rough clusters given distance measure between all pairs of input entities
 
 		:return : self.sum_lower - lower approximation for each cluster at each distance D
 		:return : self.sum_upper - upper approximation for each cluster at each distance D
 		:return : self.cluster_list - list of all entities in clusters at each distance D
 		:return : self.clusters - list of clusters at each distance D
 		"""
-
-# TODO add description
-# TODO clean code
 
 		# Loop over intra-entity distance D from 0:maxD and find candidate pairs with distance < i
 		for i in range(0,self.maxD):
@@ -192,9 +188,9 @@ class roughCluster():
 						first_cluster[keyname2] = cluster_count					# Keep track of current cluster for each key
 						cluster_count += 1
 
-			# Determine upper and lower approximations of clusters for total clusters and pruned clusters
 			if self.debug is True:
 				print "Number of Clusters for maxD: ",i," : ",cluster_count
+			# Determine upper and lower approximations of clusters for total clusters and pruned clusters
 			sum_all = len(list(itertools.chain(*[clusters[g] for g in clusters.keys() if clusters])))
 			sum_lower = 0
 			sum_upper = 0
@@ -245,7 +241,6 @@ class roughCluster():
 				   if int(h) >= self.minD}
 			sort_lst = sorted(lst.iteritems(), key=operator.itemgetter(1),reverse=True)
 			self.opt_d = sort_lst[0][0]
-
 		else:
 			self.opt_d = self.maxD
 
@@ -273,9 +268,6 @@ class roughCluster():
 			self.pruned[q+cluster_name] = {"cluster_num":{},"sum_lower":{},"sum_upper":{},"percent_covered":{},"cluster_list":{}}
 			cluster_upper_approx = {g : len(clusters[g]) for g in clusters}
 			tmpmem = sorted(cluster_upper_approx.iteritems(), key=operator.itemgetter(1),reverse=True)
-			#print "1",tmpmem
-			#tmpmem = sorted(int_tmp.iteritems(), key=operator.itemgetter(1),reverse=True)
-			#print "2",tmpmem
 			clusters1 = []
 			cluster_count1 = []
 			cluster_list1 = []
@@ -284,7 +276,6 @@ class roughCluster():
 				clusters1.append({key : clusters[key] for key in sorted_clusters})
 				cluster_count1.append(len(clusters1[p].keys()))
 				cluster_list1.append(list(itertools.chain(*[clusters1[p][g] for g in clusters1[p].keys()])))
-				#print "Pruned Clusters for maxD: ",i," and maxClusters: ",max_clusters[p]," : ",cluster_count1[p],len(cluster_list1[p])
 				# Compute upper/lower approximations for pruned clusters
 				sum_all_1 = len(list(itertools.chain(*[clusters1[p][g] for g in clusters1[p].keys() if clusters1])))
 				sum_lower1 = 0
@@ -292,17 +283,12 @@ class roughCluster():
 				intersections1 = {}
 				if len(clusters1[p].keys()) > 1:
 					for key1 in clusters1[p]:
-						#print key1
 						intersections1[key1] = {key2 : list(set(clusters1[p][key1]).intersection(set(clusters1[p][key2])))
 										 for key2 in clusters1[p] if key2 != key1}
-						#print list(itertools.chain(*[intersections[key1][g] for g in intersections[key1]]))
+
 						int_tmp1 = len(Counter(list(itertools.chain(*[intersections1[key1][g] for g in intersections1[key1]]))))
-						#int_tmp = npy.sum([intersections[key1][g] for g in intersections[key1]])
-						#print "total, intersections, lower",key1,len(clusters[key1]),int_tmp
 						sum_lower1 += (len(clusters1[p][key1]) - int_tmp1) #intersections[key1])
 						sum_upper1 += len(clusters1[p][key1])
-						#print len(clusters1[p][key1]),int_tmp1,sum_upper1,sum_lower1
-
 				else:
 					sum_lower1 = sum_all_1
 					sum_upper1 = sum_all_1
@@ -316,13 +302,14 @@ class roughCluster():
 					print "Percentage of Entities Covered for Pruned Clusters", \
 						(len(Counter(cluster_list1[p]).keys())/float(self.total_entities))*100.0
 
-				# Pack stats into output and plot
+				# Pack stats into output
 				self.pruned[q+cluster_name]["cluster_list"][value] = clusters1[p]
 				self.pruned[q+cluster_name]["cluster_num"][value] = cluster_count1[p]
 				self.pruned[q+cluster_name]["sum_lower"][value] = sum_lower1
 				self.pruned[q+cluster_name]["sum_upper"][value] = sum_upper1
 				self.pruned[q+cluster_name]["percent_covered"][value] = (len(Counter(cluster_list1[p]).keys())/float(self.total_entities))*100.0
 
+		# Find optimal distance D cluster based on self.objective
 		if optimize is True:
 			self.optimizeClusters()
 			self.optimal = {self.opt_d : self.pruned[self.opt_d]}
