@@ -6,14 +6,20 @@ An implementation of rough clustering using rough set theory and the algorithm o
 "Cluster Analysis of Marketing Data Examining On-line Shopping Orientation: A Comparison of k-means and
 Rough Clustering Approaches"
 
-@options
-max_clusters - list containing the one or more integer for max number of clusters to output
-maxD - Maximum entity distance for stopping further clustering
+@description
+This algorithm solves the rough clustering problem by enumerating clusters containing entity pairs at specific intra-entity
+distances. If input features are strings, the algorithm maps feature strings to integers. If the input features are floats, the
+algorithm bins features into integers.
 
-if maxD == number of instances to be clustered, then the algorithm stops clustering when the optimal distance D is
-		achieved based on option 'objective' which maximizes :
+@options
+max_clusters - integer corresponding to number of clusters to return
+max_d - Maximum intra-entity distance to consider before stopping further clustering
+if max_d is not specified, then algorithm determines max_d based on intra-entity distance statistics (25th percentile)
+
+@note
+The algorithm determines the optimal distance D for final clustering based on option 'objective' which maximizes :
 		"lower" : sum of lower approximations (default) - maximum entity uniqueness across all clusters at distance D
-		"coverage" : sum of total cluster entites - maximum number of entities across all clusters at distance D
+		"coverage" : total # of entites covered by all clusters - maximum number of entities across all clusters at distance D
 		"ratio" : ratio of lower/coverage - maximum ratio of unique entities to total entities across all clusters at distance D
 		"all" : return clusters at every distance D from [0 - self.total_entities]
 
@@ -22,17 +28,18 @@ if maxD == number of instances to be clustered, then the algorithm stops cluster
 """
 
 #Externals
-import json
+import time
 import itertools
 import operator
 from collections import Counter
 import numpy as npy
+from copy import deepcopy
 
 #Internals
 
 class roughCluster():
 
-	def __init__(self,input_data,objective="lower",max_d=None,max_clusters=None):
+	def __init__(self,input_data,max_clusters,objective="lower",max_d=None):
 
 		# Clustering output vars
 		self.data = input_data
@@ -44,18 +51,48 @@ class roughCluster():
 		self.cluster_list = []
 		self.total_entities = 0
 		self.pruned = {}
+		self.optimal = {}
+		self.opt_d = None
 
 		self.debug = True
 		self.small = 1.0e-10
 
 		# Clustering options
-		self.maxD = max_d				# Maximum intra-entity distance to perform clustering over
-		self.minD = None				# Minimum intra-entity fistance to perform - TBD in getEntityDistances()
-		self.objective = objective		# Objective to maximize for optimal clustering distance D
-		if max_clusters is None:
-			self.max_clusters = [2,5,10]	# Used for rejection of clusters when maximizing the sum of lower approximations for all clusters
-		else:
-			self.max_clusters = max_clusters
+		self.maxD = max_d					# Maximum intra-entity distance to perform clustering over
+		self.objective = objective			# Objective to maximize for optimal clustering distance D
+		self.max_clusters = [max_clusters]	# Number of clusters to return
+
+	def transformFeatures(self):
+
+		"""
+		Validation method for data types in feature space and transformation of float, string --> integer
+
+		:arg self.data : dictionary of <feature_name> : feature vector list pairs of types (str, int, float)
+		:return: self.dataT : dictionary containing integer transformation of all features in feature space
+		"""
+# TODO finish this transformation method
+
+		for keyname in self.data:
+
+			if any(isinstance(n,float) for n in self.data[keyname][:]):
+				locs = [0.0, float(npy.percentile(self.data[keyname],25)),float(npy.percentile(self.data[keyname],50)),
+				float(npy.percentile(self.data[keyname],75)),float(npy.percentile(self.data[keyname],80)),
+				float(npy.percentile(self.data[keyname],100))]
+				for n in range(len(self.data[keyname])):
+					for i,val in enumerate(locs[0:-1]):
+						if (self.data["payload"][keyname][n]) >= val and (self.data["payload"][keyname][n] < locs[i+1]):
+							self.data[keyname].append(i+1)
+
+			elif any(isinstance(n,int) for n in self.data[keyname][:]):
+				pass
+				# Don't do anything to feature
+			elif any(isinstance(n, (str, unicode)) for n in self.data[keyname][:]):
+				pass
+				# TODO map strings to ints
+			else:
+				raise Exception("Input features must be type int, float, or string")
+
+		return
 
 	def getEntityDistances(self):
 
@@ -69,32 +106,29 @@ class roughCluster():
 		header = self.data.keys()
 		data_length = len(self.data[header[0]])
 
-		if self.debug is True:
-			print "Data Length",data_length
-
+# TODO remove enumeration of entire distance matrix below
+		# Enumerate entire distance matrix --
 		for k in range(0,data_length):
 			self.distance[str(k)] = {str(j) : sum([abs(self.data[val][k]-self.data[val][j]) for val in header])
 										for j in range(0,data_length)}
 
-		# Form lower triangular form of all pairs (p,q) where p != q	# No repeats
+		if self.maxD is None:	# Determine maxD based on 25th percentile of all intra-cluster distances
+			curr_dists = list(itertools.chain([self.distance[h][g] for h in self.distance for g in self.distance[h]]))
+			self.maxD = int(max([npy.percentile(curr_dists,25),3]))
+
 		self.all_keys = {key : None for key in self.distance.keys()}	# Static all entity keys
 		curr_keys = {key : None for key in self.distance.keys()}		# Place holder entity keys
 		self.total_entities = len(curr_keys.keys())
 
-		if self.debug is True:
-			print "Total Entities", self.total_entities
-
-		distance = {}
+		# Compute distance of all pairs (p,q) where p != q
 		for key1 in self.distance:	# Full pair p,q lower triangular integer distance matrix enumeration
 			curr_keys.pop(key1)
 			self.distance[key1] = {key2 : int(self.distance[key1][key2]) for key2 in curr_keys.keys()}
 
-		# Update maxD = self.total_entities if not specified on instantiation
-		if self.maxD is None:
-			self.maxD = self.total_entities
-
-# TODO add minD computation here
-		self.minD = 18
+		if self.debug is True:
+			print "Total Entities to Cluster:", self.total_entities
+			print "Input Feature Length",len(header)
+			print "Max Intra-Entity Distance to Cluster:",self.maxD
 
 		return
 
@@ -111,38 +145,27 @@ class roughCluster():
 
 # TODO add description
 # TODO clean code
-# TODO add objective test here for early stopping
-# TODO add minimum number of distances to perform based on stats of distances for all entities
 
-		# Loop over min distance D from 0:maxD and find candidate pairs with distance < i
-		#out_stat1 = {"cluster_num":[],"SumLowerA":[],"SumUpperA":[],"PercentCovered":[]}
-		#out_stat2 = [{"cluster_num":[],"SumLowerA":[],"SumUpperA":[],"PercentCovered":[]} for p in range(len(max_clusters))]
-		for i in range(0,min([self.minD,self.maxD])):
+		# Loop over intra-entity distance D from 0:maxD and find candidate pairs with distance < i
+		for i in range(0,self.maxD):
 			ct2 = 0
 			cluster_count = 0
 			cluster_list = []
 			clusters = {}
 			first_cluster = {}
-			# Find entity pairs that have distance < i
+			# Find entity pairs that have distance <= i
 			candidates = {key1:[key2 for key2 in self.distance[key1].keys() if self.distance[key1][key2] <= i ]
 						  for key1 in self.all_keys}
 			print "# Candidate Pairs",i,len(list(itertools.chain(*[candidates[g] for g in candidates.keys()]))) #,max(candidates),min(candidates),npy.mean(candidates)
 			# Determine for all pairs if pairs are to be assigned to new clusters or previous clusters
-			#superset[key1] = {key2 : list(itertools.chain(*[self.T_attrs[g] for g in obj1[key2]]))
-			#						  for key2 in Tcurr if mem_over[key1][key2]>1}
 			for k,keyname in enumerate(candidates.keys()):
-				#print i,k,keyname,cluster_count,len(cluster_list)
 				for l,keyname2 in enumerate(candidates[keyname]):
-					#cluster_list = {key : clusters[i][key] for key in clusters[i]}
-					#cluster_list = list(itertools.chain(*[clusters[g] for g in clusters.keys()]))
 					if (keyname in cluster_list) and (keyname2 in cluster_list):	# Assign each entity to other's first cluster
-						#if first_cluster[keyname] != first_cluster[keyname2]:
 						if keyname not in clusters[first_cluster[keyname2]]:
 							clusters[first_cluster[keyname2]].append(keyname)
 						if keyname2 not in clusters[first_cluster[keyname]]:
 							clusters[first_cluster[keyname]].append(keyname2)
 							ct2 += 1
-							#print "intersecting clusters",ct2,first_cluster[keyname],first_cluster[keyname2],cluster_count
 					elif (keyname in cluster_list) and (keyname2 not in cluster_list):	# Assign entity 2 to entity 1's first cluster
 						clusters[first_cluster[keyname]].append(keyname2)
 						cluster_list.append(keyname2)
@@ -170,11 +193,8 @@ class roughCluster():
 				for key1 in clusters:
 					intersections[key1] = {key2 : list(set(clusters[key1]).intersection(set(clusters[key2])))
 									 for key2 in clusters if key2 != key1}
-					#print list(itertools.chain(*[intersections[key1][g] for g in intersections[key1]]))
-					int_tmp[key1] = len(clusters[key1]) - len(Counter(list(itertools.chain(*[intersections[key1][g] for g in intersections[key1]]))))
-					#print intersections[key1]
-					#int_tmp = npy.sum([intersections[key1][g] for g in intersections[key1]])
-					#print "total, intersections, lower",key1,len(clusters[key1]),int_tmp
+					int_tmp[key1] = len(clusters[key1]) - len(Counter(list(itertools.chain(*[intersections[key1][g]
+									for g in intersections[key1]]))))
 					sum_lower += int_tmp[key1] #intersections[key1])
 					sum_upper += len(clusters[key1])
 			else:
@@ -186,52 +206,60 @@ class roughCluster():
 			self.cluster_list.append(cluster_list)
 			self.clusters.append(clusters)
 
-# TODO run optimizeCluster() to get max_clusters stats at current distance D
-			# Prune clusters based on self.max_clusters
-			self.optimizeClusters()
-			# Check objective for early stopping if optimal distance D is achieved
-			early_stop = self.checkObjective()
-			if early_stop is True:
-				return
-
 		return
 
-	def checkObjective(self):
+	def optimizeClusters(self):
 
 		"""
-		Check objective to determine if optimal distance D has been achieved
+		Maximize objective over all distances D to determine optimal distance clustering
 
-		:return: True if Objective maximum achieved, else return False
+		:return: self.opt_d : optimal integer distance D
 		"""
 
 		if self.objective == "lower":
-			#self.pruned[q]["sum_lower"][p]
-			return True
-		elif self.objective == "upper":
-			#self.pruned[q]["sum_upper"][p]
-			return True
-		elif self.objective == "ratio":
-			#self.pruned[q]["percent_covered"][p]
-			return True
-		else:
-			return False
+			lst = {h : list(itertools.chain([self.pruned[h]["sum_lower"][g] for g in self.pruned[h]["sum_lower"]]))
+				   for h in self.pruned}
+			sort_lst = sorted(lst.iteritems(), key=operator.itemgetter(1),reverse=True)
+			self.opt_d = sort_lst[0][0]
 
-	def optimizeClusters(self):
+		elif self.objective == "coverage":
+			lst = {h : list(itertools.chain([self.pruned[h]["sum_upper"][g] for
+										 g in self.pruned[h]["sum_upper"].keys()])) for h in self.pruned}
+			sort_lst = sorted(lst.iteritems(), key=operator.itemgetter(1),reverse=True)
+			self.opt_d = sort_lst[0][0]
+
+		elif self.objective == "ratio":
+			lst = {h : list(itertools.chain([float(self.pruned[h]["sum_lower"][g])/
+												self.pruned[h]["sum_upper"][g] for g in
+												self.pruned[h]["sum_upper"].keys()])) for h in self.pruned}
+			sort_lst = sorted(lst.iteritems(), key=operator.itemgetter(1),reverse=True)
+			self.opt_d = sort_lst[0][0]
+
+		else:
+			self.opt_d = self.maxD
+
+		return
+
+	def pruneClusters(self,optimize=False,cluster_name=0):
 
 		"""
 		Prune all maxD clusters to number of clusters specified in self.max_clusters and associated rough clusters
 		from all maxD clusters returned by enumerateClusters()
 
+		:arg (optional) cluster_name : if supplied only run for given cluster_name key in self.clusters
 		:arg self.clusters : dictionary return of enumerateClusters() containing rough clusters and upper/lower approximation sums
 		:arg self.total_entities : total number of entities to be clustered
 		:return pruned : dictionary containing N clusters that maximize upper approximation
 
 		"""
 
-		print self.clusters
+		if cluster_name != 0:
+			clusters_in = [self.clusters[cluster_name]]
+		else:
+			clusters_in = deepcopy(self.clusters)
 
-		for q,clusters in enumerate(self.clusters):
-			self.pruned[q] = {"cluster_num":{},"sum_lower":{},"sum_upper":{},"percent_covered":{},"cluster_list":{}}
+		for q,clusters in enumerate(clusters_in):
+			self.pruned[q+cluster_name] = {"cluster_num":{},"sum_lower":{},"sum_upper":{},"percent_covered":{},"cluster_list":{}}
 			cluster_upper_approx = {g : len(clusters[g]) for g in clusters}
 			tmpmem = sorted(cluster_upper_approx.iteritems(), key=operator.itemgetter(1),reverse=True)
 			#print "1",tmpmem
@@ -276,11 +304,15 @@ class roughCluster():
 					(len(Counter(cluster_list1[p]).keys())/float(self.total_entities))*100.0
 
 				# Pack stats into output and plot
-				self.pruned[q]["cluster_list"][p] = clusters1[p]
-				self.pruned[q]["cluster_num"][p] = cluster_count1[p]
-				self.pruned[q]["sum_lower"][p] = sum_lower1
-				self.pruned[q]["sum_upper"][p] = sum_upper1
-				self.pruned[q]["percent_covered"][p] = (len(Counter(cluster_list1[p]).keys())/float(self.total_entities))*100.0
+				self.pruned[q+cluster_name]["cluster_list"][value] = clusters1[p]
+				self.pruned[q+cluster_name]["cluster_num"][value] = cluster_count1[p]
+				self.pruned[q+cluster_name]["sum_lower"][value] = sum_lower1
+				self.pruned[q+cluster_name]["sum_upper"][value] = sum_upper1
+				self.pruned[q+cluster_name]["percent_covered"][value] = (len(Counter(cluster_list1[p]).keys())/float(self.total_entities))*100.0
+
+		if optimize is True:
+			self.optimizeClusters()
+			self.optimal = {self.opt_d : self.pruned[self.opt_d]}
 
 		return
 

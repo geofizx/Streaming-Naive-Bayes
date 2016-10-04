@@ -17,8 +17,8 @@ import numpy as npy
 from scipy.cluster.vq import kmeans2
 
 # Set some rough clustering parameters
-maxD = 18
-max_clusters = [2]
+maxD = 20	#maxD will be determined by algorithm
+max_clusters = 2
 
 # Load some data
 file2 = open("german_all.json","r")
@@ -39,7 +39,6 @@ for key in data["payload"].keys():
 		if key == "amount":
 			data2[key] = []
 			for n in range(len(data["payload"][key])):
-			#[values,binsf] = npy.histogram(data2[key],[0,1500,3000,8000,20000])
 				bins = [0,1500,3000,8000,20000]
 				for i,val in enumerate(bins[0:-1]):
 					if (int(data["payload"][key][n])) >= val and (int(data["payload"][key][n]) < bins[i+1]):
@@ -52,14 +51,15 @@ for key in data["payload"].keys():
 			data2[key].append(encoding[data["payload"][key][n]])
 
 # Instantiate and run rough clustering
-clust = roughCluster(data2,"lower",maxD,max_clusters)
+clust = roughCluster(data2,max_clusters,"ratio",maxD)
 clust.getEntityDistances()
 clust.enumerateClusters()
-clust.optimizeClusters()
+clust.pruneClusters(optimize=True)
 
 print clust.clusters
 print clust.sum_upper
 print clust.sum_lower
+print clust.optimal
 
 # Compare results with known centroid mean and std deviations as well as those from k-means
 
@@ -112,21 +112,22 @@ rangek = [l+.2 for l in range(20)]
 ranger = [l+.1 for l in range(20)]
 print "total instances",Counter(data["response"])
 
-key1 = 17 # Which distance D to plot
+key1 = clust.opt_d 	# Optimal distance D to plot
 fig, axs = plt.subplots(nrows=1,ncols=1)
 axs.errorbar(range(20),mean2,fmt='ro',yerr=std2,label="True Good Centroid")
 plt.hold(True)
 axs.errorbar(range(20),mean1,fmt='bo',yerr=std1,label="True Bad Centroid")
 axs.errorbar(rangek,meankp[1],fmt='r+',yerr=stddevk[0],label="Kmeans 0")
 axs.errorbar(rangek,meankp[0],fmt='b+',yerr=stddevk[1],label="Kmeans 1")
-
-for key in clust.pruned[key1]["cluster_list"][0]:
-	print key,clust.pruned[key1]["cluster_list"][0].keys()
-	print clust.pruned[key1]["cluster_list"][0][key]
+print "Optimal",clust.pruned[key1]
+print "Optimal D",clust.opt_d
+for key in clust.pruned[key1]["cluster_list"][max_clusters]:
+	print key,clust.pruned[key1]["cluster_list"][max_clusters].keys()
+	print clust.pruned[key1]["cluster_list"][max_clusters][key]
 	datav2 = []
 	meant = []
 	stdt = []
-	for val in clust.pruned[key1]["cluster_list"][0][key]:
+	for val in clust.pruned[key1]["cluster_list"][max_clusters][key]:
 		meant.append(data["response"][int(val)])
 		datav2.append(datav[int(val),:])
 	tmp = npy.mean(npy.asarray(datav2),axis=0)
