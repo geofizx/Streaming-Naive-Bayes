@@ -51,8 +51,6 @@ clust.getEntityDistances()
 clust.enumerateClusters()
 clust.pruneClusters(optimize=True)
 
-print clust.optimal
-
 # Compare results with known centroid mean and std deviations as well as those from k-means
 # Print stats for members of clusters
 # Determine labels
@@ -92,7 +90,7 @@ for m in range(len(groups)):
 meankp = []
 stddevk = []
 for n in range(2):
-	print Counter(val[n])
+	#print Counter(val[n])
 	meankp.append(npy.mean(meank[n],axis=0))
 	stddevk.append(npy.std(meank[n],axis=0))
 
@@ -115,8 +113,6 @@ print "Optimal Intra-Entity Distance",clust.opt_d
 markers = ['bv','rv','gv','kv']
 ct = 0
 for key in clust.pruned[key1]["cluster_list"][max_clusters]:
-	#print key,clust.pruned[key1]["cluster_list"][max_clusters].keys()
-	#print clust.pruned[key1]["cluster_list"][max_clusters][key]
 	datav2 = []
 	meant = []
 	stdt = []
