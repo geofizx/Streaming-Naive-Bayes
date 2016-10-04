@@ -2,10 +2,10 @@
 # encoding: utf-8
 
 """
-Description Here
+Some unit tests and usage examples for rough_clustering class
 
-Created by Michael Tompkins on 201x-xx-xx.
-Copyright (c) 201x__PolytopX__. All rights reserved.
+@author Michael Tompkins
+@copyright 2016
 """
 
 #Externals
@@ -17,8 +17,8 @@ import numpy as npy
 from scipy.cluster.vq import kmeans2
 
 # Set some rough clustering parameters
-maxD = 20	#maxD will be determined by algorithm
-max_clusters = 2
+maxD = 20			# if None, maxD will be determined by algorithm
+max_clusters = 2	# Number of clusters to return
 
 # Load some data
 file2 = open("german_all.json","r")
@@ -27,9 +27,6 @@ print data.keys()
 
 # Do some numerical encoding for input payload
 header = []
-#header = ['checking', 'duration', 'history', 'purpose', 'amount', 'savings', 'employment', 'rate',
-#		  'status_sex', 'guarantors', 'residence', 'property', 'age', 'other_plans', 'housing',
-#		  'existing_credit', 'job_status', 'liable', 'telephone', 'foreign_worker']
 data2 = {}
 for key in data["payload"].keys():
 	header.append(key)
@@ -56,13 +53,9 @@ clust.getEntityDistances()
 clust.enumerateClusters()
 clust.pruneClusters(optimize=True)
 
-print clust.clusters
-print clust.sum_upper
-print clust.sum_lower
 print clust.optimal
 
 # Compare results with known centroid mean and std deviations as well as those from k-means
-
 # Print stats for members of clusters
 # Determine labels
 list1 = [i for i in range(len(data["response"])) if data["response"][i] == '1']
@@ -89,7 +82,7 @@ mean2 = npy.mean(data3,axis=0)
 std1 = npy.std(data1,axis=0)
 std2 = npy.std(data3,axis=0)
 
-# Just run k-means to compare
+# Just run k-means to compare centroid stats
 [centroids,groups] = kmeans2(datav,2,iter=20)
 meank = [[] for g in range(2)]
 val = [[] for n in range(len(groups))]
@@ -121,6 +114,8 @@ axs.errorbar(rangek,meankp[1],fmt='r+',yerr=stddevk[0],label="Kmeans 0")
 axs.errorbar(rangek,meankp[0],fmt='b+',yerr=stddevk[1],label="Kmeans 1")
 print "Optimal",clust.pruned[key1]
 print "Optimal D",clust.opt_d
+markers = ['bv','rv','gv','kv']
+ct = 0
 for key in clust.pruned[key1]["cluster_list"][max_clusters]:
 	print key,clust.pruned[key1]["cluster_list"][max_clusters].keys()
 	print clust.pruned[key1]["cluster_list"][max_clusters][key]
@@ -132,15 +127,10 @@ for key in clust.pruned[key1]["cluster_list"][max_clusters]:
 		datav2.append(datav[int(val),:])
 	tmp = npy.mean(npy.asarray(datav2),axis=0)
 	tmp2 = npy.std(npy.asarray(datav2),axis=0)
-	if key1 == 17:
-		if key == 13:
-			axs.errorbar(ranger,tmp,fmt='rv',yerr=tmp2,label=str(key1)+" "+str(key))
-		if key == 14:
-			axs.errorbar(ranger,tmp,fmt='bv',yerr=tmp2,label=str(key1)+" "+str(key))
-	else:
-		axs.errorbar(ranger,tmp,yerr=tmp2,label=str(key1)+" "+str(key))
-		resultsm.append(npy.mean(npy.asarray(datav2),axis=0))
-		resultss.append(npy.std((npy.asarray(datav2)),axis=0))
-		print key1,key,len(meant),Counter(meant)
+	axs.errorbar(ranger,tmp,fmt=markers[ct],yerr=tmp2,label=str(key1)+" "+str(key))
+	resultsm.append(npy.mean(npy.asarray(datav2),axis=0))
+	resultss.append(npy.std((npy.asarray(datav2)),axis=0))
+	print key1,key,len(meant),Counter(meant)
+	ct += 1
 plt.legend()
 plt.show()
