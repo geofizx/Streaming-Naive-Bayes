@@ -6,11 +6,6 @@ An implementation of rough clustering using rough set theory and the algorithm o
 "Cluster Analysis of Marketing Data Examining On-line Shopping Orientation: A Comparison of k-means and
 Rough Clustering Approaches"
 
-@description
-This algorithm solves the rough clustering problem by enumerating clusters containing entity pairs at specific intra-entity
-distances. If input features are strings, the algorithm maps feature strings to integers. If the input features are floats, the
-algorithm bins features into integers.
-
 @options
 max_clusters - integer corresponding to number of clusters to return
 max_d - Maximum intra-entity distance to consider before stopping further clustering
@@ -98,7 +93,7 @@ class roughCluster():
 		"""
 		Compute intra-entity distance matrix for all unique entities in input
 
-		:arg self.data
+		uses self.data
 		:return: self.distance : intra-entity distances for all unique (lower traingular) pairs of entities
 		"""
 
@@ -190,6 +185,7 @@ class roughCluster():
 
 			if self.debug is True:
 				print "Number of Clusters for maxD: ",i," : ",cluster_count
+
 			# Determine upper and lower approximations of clusters for total clusters and pruned clusters
 			sum_all = len(list(itertools.chain(*[clusters[g] for g in clusters.keys() if clusters])))
 			sum_lower = 0
@@ -253,8 +249,8 @@ class roughCluster():
 		from all maxD clusters returned by enumerateClusters()
 
 		:arg (optional) cluster_name : if supplied only run for given cluster_name key in self.clusters
-		:arg self.clusters : dictionary return of enumerateClusters() containing rough clusters and upper/lower approximation sums
-		:arg self.total_entities : total number of entities to be clustered
+		uses self.clusters : dictionary return of enumerateClusters() containing rough clusters and upper/lower approximation sums
+		uses self.total_entities : total number of entities to be clustered
 		:return pruned : dictionary containing N clusters that maximize upper approximation
 
 		"""
