@@ -6,6 +6,8 @@ An implementation of rough clustering using rough set theory and the algorithm o
 "Cluster Analysis of Marketing Data Examining On-line Shopping Orientation: A Comparison of k-means and
 Rough Clustering Approaches"
 
+This algorithm takes as input a feature set of type integer
+
 @options
 max_clusters - integer corresponding to number of clusters to return
 max_d - Maximum intra-entity distance to consider before stopping further clustering
@@ -55,38 +57,6 @@ class roughCluster():
 		self.maxD = max_d					# Maximum intra-entity distance to perform clustering over
 		self.objective = objective			# Objective to maximize for optimal clustering distance D
 		self.max_clusters = [max_clusters]	# Number of clusters to return
-
-	def transformFeatures(self):
-
-		"""
-		Validation method for data types in feature space and transformation of float, string --> integer
-
-		:arg self.data : dictionary of <feature_name> : feature vector list pairs of types (str, int, float)
-		:return: self.dataT : dictionary containing integer transformation of all features in feature space
-		"""
-		# TODO finish this transformation method
-
-		for keyname in self.data:
-
-			if any(isinstance(n,float) for n in self.data[keyname][:]):
-				locs = [0.0, float(npy.percentile(self.data[keyname],25)),float(npy.percentile(self.data[keyname],50)),
-				float(npy.percentile(self.data[keyname],75)),float(npy.percentile(self.data[keyname],80)),
-				float(npy.percentile(self.data[keyname],100))]
-				for n in range(len(self.data[keyname])):
-					for i,val in enumerate(locs[0:-1]):
-						if (self.data["payload"][keyname][n]) >= val and (self.data["payload"][keyname][n] < locs[i+1]):
-							self.data[keyname].append(i+1)
-
-			elif any(isinstance(n,int) for n in self.data[keyname][:]):
-				pass
-				# Don't do anything to feature
-			elif any(isinstance(n, (str, unicode)) for n in self.data[keyname][:]):
-				pass
-				# TODO map strings to ints
-			else:
-				raise Exception("Input features must be type int, float, or string")
-
-		return
 
 	def getEntityDistances(self):
 
