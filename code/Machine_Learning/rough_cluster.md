@@ -17,8 +17,7 @@
         Boundary Region - A_sup(x_i) - A_sub(x_i) - Difference between Upper and Lower Approximation which contain strictly
         non-unique (shared) entites, i.e., indiscernible and entities belongs to two or more upper approximations
 
-    This code is an implementation of rough clustering as outlined by Voges, Pope & Brown, 2002, "Cluster Analysis of Marketing
-    Data Examining On-line Shopping Orientation: A Comparison of k-means and Rough Clustering Approaches"
+    This code is an implementation of rough clustering as outlined by Voges et al., 2002
 
     This algorithm takes as input a feature set with integer features only
 
@@ -48,3 +47,8 @@
     statistics in the resulting graph
 
     Rough clusters do not represent unique entities, but do better represent feature statistics compared to k-means.
+
+####References
+
+    Voges, Pope & Brown, 2002, "Cluster Analysis of Marketing Data Examining On-line Shopping Orientation:
+    A Comparison of k-means and Rough Clustering Approaches"
