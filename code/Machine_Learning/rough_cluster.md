@@ -30,7 +30,7 @@ This algorithm takes as input a feature set with integer features only
     statistics (25th percentile)
 
 ####Optimized Clusters
-The algorithm determines the optimal distance D for final clustering based on option 'objective' which maximizes :
+    The algorithm determines the optimal distance D for final clustering based on option 'objective' which maximizes :
     "lower" : sum of lower approximations (default) - maximum entity uniqueness across all clusters at distance D
     "coverage" : total # of entites covered by all clusters - maximum number of entities across all clusters at distance D
     "ratio" : ratio of lower/coverage - maximum ratio of unique entities to total entities across all clusters at distance D
