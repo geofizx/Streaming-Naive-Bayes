@@ -25,17 +25,16 @@
 
 ####Options
     max_clusters - integer corresponding to number of clusters to return
-    objective (default="lower") - return max_clusters at distance D that maximizes this property of clusters
-    max_d - Maximum intra-entity distance to consider before stopping further clustering
+    objective (default="ratio") - return max_clusters at distance D that maximizes this property of clusters
+    max_d - Maximum inter-entity distance to consider before stopping further clustering
 
-    if max_d is not specified, then algorithm determines max_d based on intra-entity distance
-    statistics (25th percentile)
+    if max_d is not specified, then algorithm determines max_d based on inter-entity distance (25th percentile)
 
 ####Optimized Clusters
-    The algorithm determines the optimal distance D for final clustering based on option 'objective' which maximizes :
-    "lower" : sum of lower approximations (default) - maximum entity uniqueness across all clusters at distance D
+    The algorithm determines the optimal inter-entity distance D for final clustering based on option 'objective' which maximizes :
+    "lower" : sum of lower approximations - maximum entity uniqueness across all clusters at distance D
     "coverage" : total # of entites covered by all clusters - maximum number of entities across all clusters at distance D
-    "ratio" : ratio of lower/coverage - maximum ratio of unique entities to total entities across all clusters at distance D
+    "ratio" : ratio of lower/coverage (default) - maximum ratio of unique entities to total entities across all clusters at distance D
     "all" : return clusters at every distance D from [0 - self.total_entities]
 
 ####Usage

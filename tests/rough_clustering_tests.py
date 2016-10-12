@@ -93,7 +93,7 @@ for n in range(2):
 	meankp.append(npy.mean(meank[n],axis=0))
 	stddevk.append(npy.std(meank[n],axis=0))
 
-# Compile stats for rough clusters
+# Compile stats for rough clusters and plot results with known class statistics and kmeans results
 resultsm = []
 resultss = []
 rangek = [l+.2 for l in range(20)]

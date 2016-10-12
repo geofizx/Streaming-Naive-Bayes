@@ -10,14 +10,14 @@ This algorithm takes as input a feature set with integer features only
 
 @options
 max_clusters - integer corresponding to number of clusters to return
-max_d - Maximum intra-entity distance to consider before stopping further clustering
-if max_d is not specified, then algorithm determines max_d based on intra-entity distance statistics (25th percentile)
+max_d - Maximum inter-entity distance to consider before stopping further clustering
+if max_d is not specified, then algorithm determines max_d based on inter-entity distance statistics (25th percentile)
 
 @note
 The algorithm determines the optimal distance D for final clustering based on option 'objective' which maximizes :
-		"lower" : sum of lower approximations (default) - maximum entity uniqueness across all clusters at distance D
+		"lower" : sum of lower approximations - maximum entity uniqueness across all clusters at distance D
 		"coverage" : total # of entites covered by all clusters - maximum number of entities across all clusters at distance D
-		"ratio" : ratio of lower/coverage - maximum ratio of unique entities to total entities across all clusters at distance D
+		"ratio" : ratio of lower/coverage (default) - maximum ratio of unique entities to total entities across all clusters at distance D
 		"all" : return clusters at every distance D from [0 - self.total_entities]
 
 @author Michael Tompkins
@@ -34,7 +34,7 @@ from copy import deepcopy
 
 class roughCluster():
 
-	def __init__(self,input_data,max_clusters,objective="lower",max_d=None):
+	def __init__(self,input_data,max_clusters,objective="ratio",max_d=None):
 
 		# Clustering output vars
 		self.data = input_data
@@ -53,18 +53,18 @@ class roughCluster():
 		self.small = 1.0e-10
 
 		# Clustering options
-		self.minD = None					# Minimum intra-entity distance to perform clustering over
-		self.maxD = max_d					# Maximum intra-entity distance to perform clustering over
+		self.minD = None					# Minimum inter-entity distance to perform clustering over
+		self.maxD = max_d					# Maximum inter-entity distance to perform clustering over
 		self.objective = objective			# Objective to maximize for optimal clustering distance D
 		self.max_clusters = [max_clusters]	# Number of clusters to return
 
 	def getEntityDistances(self):
 
 		"""
-		Compute intra-entity distance matrix for all unique entities in input
+		Compute inter-entity distance matrix for all unique entities in input
 
 		uses self.data
-		:return: self.distance : intra-entity distances for all unique (lower traingular) pairs of entities
+		:return: self.distance : inter-entity distances for all unique (lower traingular) pairs of entities
 		"""
 
 		header = self.data.keys()
@@ -79,7 +79,7 @@ class roughCluster():
 
 		curr_dists = list(itertools.chain([self.distance[h][g] for h in self.distance for g in self.distance[h]]))
 		self.minD = int(max([npy.percentile(curr_dists,2),2]))
-		if self.maxD is None:	# Determine maxD based on 25th percentile of all intra-cluster distances
+		if self.maxD is None:	# Determine maxD based on 25th percentile of all inter-cluster distances
 			self.maxD = int(max([npy.percentile(curr_dists,25),3]))
 
 
@@ -116,7 +116,7 @@ class roughCluster():
 		:return : self.clusters - list of clusters at each distance D
 		"""
 
-		# Loop over intra-entity distance D from 0:maxD and find candidate pairs with distance < i
+		# Loop over inter-entity distance D from 0:maxD and find candidate pairs with distance < i
 		for i in range(0,self.maxD):
 			ct2 = 0
 			cluster_count = 0
