@@ -39,8 +39,8 @@
 
 ####Usage
 
-   /tests/rough_clustering_tests.py - example usage and tests for known 2-class clustering problem in UCI Statlog Data
-   set for credit risk
+    /tests/rough_clustering_tests.py - example usage and tests for known 2-class clustering problem in UCI Statlog Data
+    set for credit risk
 
 ####Test Data Notes
 
