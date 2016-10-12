@@ -57,7 +57,7 @@ clust.pruneClusters(optimize=True)
 
 # Compare results with known centroid mean and std deviations as well as those from k-means
 # Print stats for members of clusters
-# Determine labels
+# Determine labels from known classes for "good" and "bad" credit risk
 list1 = [i for i in range(len(data["response"])) if data["response"][i] == '1']
 list2 = [i for i in range(len(data["response"])) if data["response"][i] == '2']
 
@@ -71,18 +71,13 @@ for key in header:
 datav = npy.asfarray(tableau_lists).T
 data1 = npy.asarray(tableau_1).T
 data3 = npy.asarray(tableau_2).T
-# plt.scatter(npy.squeeze(data1[:,2]),npy.squeeze(data1[:,13]),c="b",label="Good")
-# plt.hold(True)
-# plt.scatter(npy.squeeze(data3[:,2]),npy.squeeze(data3[:,13]),c="r",label="Bad")
-# plt.title("Checking Account versus Account Duration for Credit Risk")
-# plt.show()
 
 mean1 = npy.mean(data1,axis=0)
 mean2 = npy.mean(data3,axis=0)
 std1 = npy.std(data1,axis=0)
 std2 = npy.std(data3,axis=0)
 
-# Just run k-means to compare centroid stats
+# Just run k-means to compare centroid mean and std deviations
 [centroids,groups] = kmeans2(datav,2,iter=20)
 meank = [[] for g in range(2)]
 val = [[] for n in range(len(groups))]
@@ -107,11 +102,12 @@ print "total instances",Counter(data["response"])
 
 key1 = clust.opt_d 	# Optimal distance D to plot
 fig, axs = plt.subplots(nrows=1,ncols=1)
-axs.errorbar(range(20),mean2,fmt='ro',yerr=std2,label="True Good Centroid")
+axs.errorbar(range(20),mean2,fmt='ro',yerr=std2,label="True Good Mean+-Std Dev")
 plt.hold(True)
-axs.errorbar(range(20),mean1,fmt='bo',yerr=std1,label="True Bad Centroid")
-axs.errorbar(rangek,meankp[1],fmt='r+',yerr=stddevk[0],label="Kmeans 0")
-axs.errorbar(rangek,meankp[0],fmt='b+',yerr=stddevk[1],label="Kmeans 1")
+plt.title("Comparison of Mean +- Std Deviation for 'Good' and 'Bad' Credit Risk Clustering")
+axs.errorbar(range(20),mean1,fmt='bo',yerr=std1,label="True Bad Mean+-Std Dev")
+axs.errorbar(rangek,meankp[1],fmt='r+',yerr=stddevk[0],label="Kmeans 0 Class")
+axs.errorbar(rangek,meankp[0],fmt='b+',yerr=stddevk[1],label="Kmeans 1 Class")
 print "Optimal Clusters",clust.pruned[key1]
 print "Optimal Intra-Entity Distance",clust.opt_d
 markers = ['bv','rv','gv','kv']
@@ -125,10 +121,13 @@ for key in clust.pruned[key1]["cluster_list"][max_clusters]:
 		datav2.append(datav[int(val),:])
 	tmp = npy.mean(npy.asarray(datav2),axis=0)
 	tmp2 = npy.std(npy.asarray(datav2),axis=0)
-	axs.errorbar(ranger,tmp,fmt=markers[ct],yerr=tmp2,label=str(key1)+" "+str(key))
+	axs.errorbar(ranger,tmp,fmt=markers[ct],yerr=tmp2,label="Rough Cluster D="+str(key1)+" Cluster:"+str(key))
 	resultsm.append(npy.mean(npy.asarray(datav2),axis=0))
 	resultss.append(npy.std((npy.asarray(datav2)),axis=0))
 	print key1,key,len(meant),Counter(meant)
 	ct += 1
+plt.axis([0,20,-2,7])
+plt.xlabel("Feature Number",fontsize=14)
+plt.ylabel("Centroid Mean +- Std Dev.",fontsize=14)
 plt.legend()
 plt.show()

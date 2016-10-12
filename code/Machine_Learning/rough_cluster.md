@@ -42,5 +42,8 @@
    /tests/rough_clustering_tests.py - example usage and tests for known 2-class clustering problem in UCI Statlog Data
    set for credit risk
 
-   Note : In these tests, resulting cluster mean and std deviations from centroids are compared to kmeans and true class
-           statistics
+   Test Data Notes :
+    In these tests, resulting cluster mean and std deviations from centroids are compared to kmeans and true class
+    statistics in the resulting graph
+
+    Rough clusters do not represent unique entities, but do better represent feature statistics compared to k-means.
