@@ -37,7 +37,7 @@
     "ratio" : ratio of lower/coverage - maximum ratio of unique entities to total entities across all clusters at distance D
     "all" : return clusters at every distance D from [0 - self.total_entities]
 
-####Usage####
+####Usage
 
    /tests/rough_clustering_tests.py - example usage and tests for known 2-class clustering problem in UCI Statlog Data
    set for credit risk
