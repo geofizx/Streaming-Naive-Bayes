@@ -2,11 +2,11 @@
 
 ###Description
     This algorithm clusters multi-dimensional feature sets with N number of instances (entities) based on an
-    absolute integer-distance measure between all entities (sum of all absolute feature differences between any 2 entities).
+    absolute integer-distance measure, D, between all entities (sum of all absolute feature differences between any 2 entities).
 
-    The basic objective is to divide a set of entities into discernible (uniquely clustered) entities and
-    indiscernible (shared) entities by assigning these entities to subsets. Clusters are based on entity attributes
-    and not statistical metrics.
+    The basic objective is to divide entities into discernible (uniquely clustered) entities and
+    indiscernible (shared) entities by assigning these entities to subsets. Clusters are based on absolute distance D
+    and not the Euclidean distance as in k-means.
 
     It also makes use of three properties of rough sets to enumerate these clusters (x_i) from the input feature set for entities:
 
@@ -36,3 +36,11 @@
     "coverage" : total # of entites covered by all clusters - maximum number of entities across all clusters at distance D
     "ratio" : ratio of lower/coverage - maximum ratio of unique entities to total entities across all clusters at distance D
     "all" : return clusters at every distance D from [0 - self.total_entities]
+
+####Usage####
+
+   /tests/rough_clustering_tests.py - example usage and tests for known 2-class clustering problem in UCI Statlog Data
+   set for credit risk
+
+   Note : In these tests, resulting cluster mean and std deviations from centroids are compared to kmeans and true class
+           statistics
