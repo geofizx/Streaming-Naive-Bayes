@@ -2,11 +2,7 @@
 # encoding: utf-8
 
 """
-An implementation of rough clustering using rough set theory and the algorithm outlined by Voges, Pope & Brown, 2002,
-"Cluster Analysis of Marketing Data Examining On-line Shopping Orientation: A Comparison of k-means and
-Rough Clustering Approaches"
-
-This algorithm takes as input a feature set with integer features only
+An implementation of rough clustering for multi-dimensional integer features
 
 @options
 max_clusters - integer corresponding to number of clusters to return
