@@ -38,6 +38,7 @@ data1 = json.load(file1)
 for name in data1["data"]:
 	data_in["data"][name] = npy.asfarray(data1["data"][name]).tolist()
 	data_in["time"][name] = data1["time"][name]
+
 print "Time-Series Labels: ",data_in["data"].keys()
 t_en = time.time()
 print "Data Load Time:",t_en - t_st,"\n"

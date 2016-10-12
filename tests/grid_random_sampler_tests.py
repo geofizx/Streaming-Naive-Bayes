@@ -10,8 +10,7 @@ Some unit tests and usage examples for random and sparse grid sampler class
 2D Clenshaw-Curtis sparse grid nodes
 2D Poisson Disk samples
 2D Uniform Random samples
-
-Generate plots for some outputs
+2D Stroud/Xiu degree-2, degree-3 nodes
 
 @author Michael Tompkins
 @copyright 2016

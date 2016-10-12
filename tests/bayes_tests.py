@@ -4,6 +4,10 @@
 """
 Some example training/prediction/error and usage examples for streaming Naive Bayes classifier
 
+@data - UCI dataset:
+[Moro et al., 2014] S. Moro, P. Cortez and P. Rita. A Data-Driven Approach to Predict the Success of
+Bank Telemarketing. Decision Support Systems, Elsevier, 62:22-31, June 2014
+
 @author Michael Tompkins
 @copyright 2016
 """
@@ -62,7 +66,7 @@ if stream is True:  # Learn sequentially over data stream
 		if k == 0:
 			[priors_dict, pars_dict] = lrner.classLearn(datatmp,responsetmp)  # Train on first two instances
 		else:
-			[priors_dict, pars_dict] = lrner.classUpdate(priors_dict,pars_dict,datatmp,responsetmp)  # Train sequentially
+			[priors_dict, pars_dict] = lrner.classUpdate(priors_dict,pars_dict,datatmp,responsetmp)  # Update sequentially
 
 	# Make some batch predictions
 	class_dict2 = lrner.classPredict(priors_dict,pars_dict,test_data)

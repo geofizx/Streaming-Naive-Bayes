@@ -4,6 +4,10 @@
 """
 Some unit tests and usage examples for rough_clustering class
 
+@data UCI Statlog Data Set:
+Lichman, M. (2013). UCI Machine Learning Repository [http://archive.ics.uci.edu/ml]. Irvine, CA:
+University of California, School of Information and Computer Science.
+
 @author Michael Tompkins
 @copyright 2016
 """
