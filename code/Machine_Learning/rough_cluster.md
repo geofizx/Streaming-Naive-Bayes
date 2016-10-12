@@ -19,7 +19,9 @@
 
     This code is an implementation of rough clustering as outlined by Voges et al., 2002
 
-    This algorithm takes as input a feature set with integer features only
+####Input
+
+    This algorithm takes as input a dictionary with <feature_name> : list pairs (integer features)
 
 ####Options
     max_clusters - integer corresponding to number of clusters to return
