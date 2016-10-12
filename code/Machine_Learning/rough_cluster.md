@@ -23,13 +23,15 @@ Data Examining On-line Shopping Orientation: A Comparison of k-means and Rough C
 This algorithm takes as input a feature set with integer features only
 
 ####Options
-max_clusters - integer corresponding to number of clusters to return
-max_d - Maximum intra-entity distance to consider before stopping further clustering
-if max_d is not specified, then algorithm determines max_d based on intra-entity distance statistics (25th percentile)
+    max_clusters - integer corresponding to number of clusters to return
+    max_d - Maximum intra-entity distance to consider before stopping further clustering
+
+    if max_d is not specified, then algorithm determines max_d based on intra-entity distance
+    statistics (25th percentile)
 
 ####Optimized Clusters
 The algorithm determines the optimal distance D for final clustering based on option 'objective' which maximizes :
-		"lower" : sum of lower approximations (default) - maximum entity uniqueness across all clusters at distance D
-		"coverage" : total # of entites covered by all clusters - maximum number of entities across all clusters at distance D
-		"ratio" : ratio of lower/coverage - maximum ratio of unique entities to total entities across all clusters at distance D
-		"all" : return clusters at every distance D from [0 - self.total_entities]
+    "lower" : sum of lower approximations (default) - maximum entity uniqueness across all clusters at distance D
+    "coverage" : total # of entites covered by all clusters - maximum number of entities across all clusters at distance D
+    "ratio" : ratio of lower/coverage - maximum ratio of unique entities to total entities across all clusters at distance D
+    "all" : return clusters at every distance D from [0 - self.total_entities]
