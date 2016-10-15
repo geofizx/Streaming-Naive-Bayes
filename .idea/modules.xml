@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/Sampling-Integration-Interpolation.iml" filepath="$PROJECT_DIR$/.idea/Sampling-Integration-Interpolation.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/Streaming_Bayes.iml" filepath="$PROJECT_DIR$/.idea/Streaming_Bayes.iml" />
     </modules>
   </component>
 </project>
