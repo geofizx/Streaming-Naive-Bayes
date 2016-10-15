@@ -22,7 +22,7 @@
     features dictionary with <feature_name> : [values] (list) pairs for every feature
     target class dictionary in form "class" : [target class values] (list of ints or strings)
 
-####Dependencies
+####Dependencies####
     collections.Counter
 
 ####Usage
