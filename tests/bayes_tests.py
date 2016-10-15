@@ -13,7 +13,9 @@ Bank Telemarketing. Decision Support Systems, Elsevier, 62:22-31, June 2014
 """
 
 import json
-from Machine_Learning import classifier
+
+from code import classifier
+
 
 # Determine which tests are run below
 batch = True
