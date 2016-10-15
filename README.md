@@ -28,6 +28,10 @@
 ####Usage
     /tests/bayes_tests.py - example usage and tests for known 2-class classification problem in UCI Bank Train data set.
 
+####Test Data
+    UCI dataset: [Moro et al., 2014] S. Moro, P. Cortez and P. Rita. A Data-Driven Approach to Predict the Success of
+    Bank Telemarketing. Decision Support Systems, Elsevier, 62:22-31, June 2014
+
 #### License ####
 * [MIT License](LICENSE.md)
 
