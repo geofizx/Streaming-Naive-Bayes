@@ -32,7 +32,7 @@ import copy
 class classifier:
 
 	"""
-	Naive Bayes Classifier
+	Streaming Naive Bayes Class
 	"""
 
 	def __init__(self):
