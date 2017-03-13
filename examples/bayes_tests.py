@@ -2,85 +2,60 @@
 # encoding: utf-8
 
 """
-Some example training/prediction/error and usage examples for streaming Naive Bayes classifier
+Some example training/prediction/error and usage examples
+for streaming Naive Bayes classifier
 
-@data - UCI data set:
-[Moro et al., 2014] S. Moro, P. Cortez and P. Rita. A Data-Driven Approach to Predict the Success of
-Bank Telemarketing. Decision Support Systems, Elsevier, 62:22-31, June 2014
+Data - UCI Data:
+[Moro et al., 2014] S. Moro, P. Cortez and P. Rita.
+A Data-Driven Approach to Predict the Success of Bank Telemarketing.
+Decision Support Systems, Elsevier, 62:22-31, June 2014
 
-@author Michael Tompkins
-@copyright 2016
+Author Michael Tompkins
+Copyright 2016
 """
 
 import json
 from code import Classifier
-import numpy as np
-import pandas as pd
 
-# Determine which examples are run below
+# Determine which tests are run below
 batch = True
-stream = False
+stream = True
 
-#data_train = "bank_train_data.json"
-#data_test = "bank_test_data.json"
-data_train = "/Users/mtompkins1/Downloads/rebuttal_data.csv"
-
-all_data = pd.read_csv(data_train)
-all_data['won'] = all_data.won.fillna(0.0)
-
-for name in all_data:
-    if all_data[name].dtype not in ['int64', 'float64']:
-        all_data[name] = all_data[name].apply(str)
-
-all_data['is_train'] = np.random.uniform(0, 1, len(all_data)) <= .8
-(train, test) = (all_data[all_data['is_train'] == True],
-                all_data[all_data['is_train'] == False])
-
-train_data = train.to_dict(orient='list')
-train_responses = {'response': train_data['won']}
-train_data.pop("won")
-train_data.pop("customer_id")
-train_data.pop("is_train")
-train_data.pop("message")
-
-test_data = test.to_dict(orient='list')
-test_responses = {'response': test_data['won']}
-test_data.pop("won")
-test_data.pop("customer_id")
-test_data.pop("is_train")
-test_data.pop("message")
+data_train = "bank_train_data.json"
+data_test = "bank_test_data.json"
 
 # Load feature and class training and testing data from file
-# dfile = open(data_train, "r")
-# data1 = json.load(dfile)
-# all_responses = data1['response']
-# data1.pop("response")
-# all_data = data1
-# train_data = data1["data_set"]
+dfile = open(data_train, "r")
+data1 = json.load(dfile)
+train_responses = data1['response']
+data1.pop("response")
+train_data = data1["data_set"]
 
-# dfile = open(data_test, "r")
-# data2 = json.load(dfile)
-# test_responses = data2['response']
-# data2.pop("response")
-# test_data = data2["data_set"]
+dfile = open(data_test, "r")
+data2 = json.load(dfile)
+test_responses = data2['response']
+data2.pop("response")
+test_data = data2["data_set"]
 
-if batch is True:  # Learn in one batch call to classifier
+if batch is True:		# Learn in one batch call to classifier
 
     # Instantiate and train classifier
     lrner = Classifier()
-    [priors_dict, pars_dict] = lrner.class_learn(train_data, train_responses)
+    [priors_dict, pars_dict] = lrner.class_learn(train_data,
+                                                 train_responses)
 
-    print priors_dict
-    print pars_dict
     # Make some batch predictions
-    class_dict2 = lrner.class_predict(priors_dict, pars_dict, test_data)
+    class_dict2 = lrner.class_predict(priors_dict,
+                                      pars_dict,test_data)
 
     # Compute prediction statistics
-    stats = lrner.class_acc(class_dict2, test_responses, "all")
+    stats = lrner.class_acc(class_dict2,test_responses,"all")
     print "Batch Learning Error Statistics"
-    for l, classname in enumerate(stats["class_names"]):
-        print "Predicted Class : ", classname, " Recall : ", stats["recall"][l], " Precision :", stats["precision"][l], \
-            " F1 Score :", stats["f1_scores"][l], " Composite Accuracy :", stats["Composite_Accuracy"]
+    for l,classname in enumerate(stats["class_names"]):
+        print "Predicted Class : ", classname," Recall : ",\
+            stats["recall"][l], " Precision :", stats["precision"][l], \
+            " F1 Score :", stats["f1_scores"][l],\
+            " Composite Accuracy :", stats["Composite_Accuracy"]
 
 if stream is True:  # Learn sequentially over data stream
 
@@ -91,21 +66,26 @@ if stream is True:  # Learn sequentially over data stream
     priors_dict = {}
     pars_dict = {}
     tot = len(train_responses["class"])
-    for k in range(0, tot, 2):
-        datatmp = {m: train_data[m][k:k + 2] for m in train_data.keys()}
-        responsetmp = {m: train_responses[m][k:k + 2] for m in train_responses.keys()}
+    for k in range(0,tot,2):
+        datatmp = {m : train_data[m][k:k+2] for m in train_data.keys()}
+        responsetmp = {m : train_responses[m][k:k+2] for m in train_responses.keys()}
         if k == 0:
-            [priors_dict, pars_dict] = lrner.class_learn(datatmp, responsetmp)  # Train on first two instances
+            # Train on first two instances
+            [priors_dict, pars_dict] = lrner.class_learn(datatmp,
+                                                         responsetmp)
         else:
-            [priors_dict, pars_dict] = lrner.class_update(priors_dict, pars_dict, datatmp,
-                                                          responsetmp)  # Update sequentially
+            # Update sequentially
+            [priors_dict, pars_dict] = lrner.class_update(priors_dict, pars_dict,
+                                                          datatmp,responsetmp)
 
     # Make some batch predictions
-    class_dict2 = lrner.class_predict(priors_dict, pars_dict, test_data)
+    class_dict2 = lrner.class_predict(priors_dict,pars_dict,test_data)
 
     # Compute prediction statistics
-    stats = lrner.class_acc(class_dict2, test_responses, "all")
+    stats = lrner.class_acc(class_dict2,test_responses,"all")
     print "Streaming Learning Error Statistics"
     for l, classname in enumerate(stats["class_names"]):
-        print "Predicted Class : ", classname, " Recall : ", stats["recall"][l], " Precision :", stats["precision"][l], \
-            " F1 Score :", stats["f1_scores"][l], " Composite Accuracy :", stats["Composite_Accuracy"]
+        print "Predicted Class : ", classname, " Recall : ", stats["recall"][l], \
+            " Precision :", stats["precision"][l], \
+            " F1 Score :", stats["f1_scores"][l],\
+            " Composite Accuracy :", stats["Composite_Accuracy"]

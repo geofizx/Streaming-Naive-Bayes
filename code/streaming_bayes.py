@@ -32,6 +32,7 @@ from collections import Counter
 import copy
 import numpy as npy
 
+
 class Classifier:
 
     """
@@ -41,7 +42,7 @@ class Classifier:
     def __init__(self):
 
         self.listmap = None
-        self.debug = True
+        self.debug = False
         self.small = 1.0e-10
 
     def validate_features(self, feature_set):
