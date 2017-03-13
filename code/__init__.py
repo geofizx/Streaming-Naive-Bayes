@@ -1,2 +1,2 @@
 # Make some package level imports
-from streaming_Bayes import classifier
+from streaming_bayes import Classifier
