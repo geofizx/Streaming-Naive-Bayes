@@ -1,16 +1,16 @@
 # Streaming Naive Bayes Classifier
 
-####Description
+*Description*
 
 	Streaming Naive Bayes Classifier including dynamic re-binning, training, predictions, and classification
 	error statistics. Handles heterogeneous feature sets with mixed INT, FLOAT, STRING feature types. Also handles
 	missing feature values explicitly.
 
-####Notes
+####Notes####
 	Includes dynamic binning to account for updated feature dynamic ranges over data stream, re-binning implemented here
 	is quite crude and needs to be improved.
 
-####Methods Implemented
+####Methods Implemented####
     class_learn - Training using continuous (float), categorical (int or string), and mixed feature data types
 	class_predict - Predictions based on Naive Bayes Classifier
 	class_update - Update method for incremental (streaming) training
