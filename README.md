@@ -1,6 +1,6 @@
 # Streaming Naive Bayes Classifier
 
-**Description
+**Description**
 
 	Streaming Naive Bayes Classifier including dynamic re-binning, training, predictions, and classification
 	error statistics. Handles heterogeneous feature sets with mixed INT, FLOAT, STRING feature types. Also handles
